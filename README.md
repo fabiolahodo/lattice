@@ -24,7 +24,7 @@ To use the library, clone the repository and install the necessary dependencies.
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone [https://github.com/fabiolahodo/lattice.git]
    ```
 2. Install dependencies:
    ```bash
