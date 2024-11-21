@@ -1,0 +1,99 @@
+<!--examples/basic-example/index.html-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Basic Concept Lattice</title>
+  <!-- Link to the stylesheet -->
+  <link rel="stylesheet" href="../../src/styles/style.css">
+  <style>
+    table {
+        border-collapse: collapse;
+        width: 50%;
+    }
+    th, td {
+        border: 1px solid black;
+        text-align: center;
+        padding: 8px;
+    }
+</style>
+
+</head>
+<body>
+  <p> This is a simple example of a concept lattice. </p>
+  <table>
+    <thead>
+        <tr>
+            <th></th>
+            <th>a</th>
+            <th>b</th>
+            <th>c</th>
+            <th>d</th>
+            <th>e</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>T<sub>1</sub></td>
+            <td>x</td>
+            <td></td>
+            <td></td>
+            <td>x</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>T<sub>2</sub></td>
+            <td>x</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>x</td>
+        </tr>
+        <tr>
+            <td>T<sub>3</sub></td>
+            <td></td>
+            <td></td>
+            <td>x</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>T<sub>4</sub></td>
+            <td>x</td>
+            <td>x</td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>T<sub>5</sub></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>x</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>T<sub>6</sub></td>
+            <td>x</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>x</td>
+        </tr>
+        <tr>
+            <td>T<sub>7</sub></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td>x</td>
+        </tr>
+    </tbody>
+</table>
+<p>a:equilateral,	 b:isosceles, 	c:acute, 	d:obtuse, 	e:right</p><br>
+  <div id="graph-container" style="width: 100%; height: 100%;"></div>
+  <script type="module" src="../../dist/bundle.js" data-dataset="../../data/small-lattice.json"></script>
+</body>
+</html>
