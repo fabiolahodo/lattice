@@ -34,7 +34,7 @@ To use or develop this library, we recommend using Visual Studio Code as the dev
    ```bash
    npm install
    ```
-   This command will install all the dependencies listed in the package.json file, including the necessary libraries for running and building the library.
+   This command will install all the dependencies listed in the `package.json` file, including the necessary libraries for running and building the library.
 4. Build the library:
    ```bash
    npm run build
