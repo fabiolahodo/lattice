@@ -20,18 +20,22 @@ The library is **not feature-complete** and may have bugs or missing functionali
 
 ## 🛠️ Installation
 
-To use the library, clone the repository and install the necessary dependencies.
+To use or develop this library, we recommend using Visual Studio Code as the development environment. Follow these steps to set up the project:
 
 1. Clone the repository:
    ```bash
-   git clone [https://github.com/fabiolahodo/lattice.git]
+   git clone https://github.com/fabiolahodo/lattice.git
    ```
-2. Install dependencies:
+   ```bash
+   cd lattice
+   ```
+2. Open the project in Visual Studio Code
+3. Install dependencies:
    ```bash
    npm install
    ```
    This command will install all the dependencies listed in the package.json file, including the necessary libraries for running and building the library.
-3. Build the library:
+4. Build the library:
    ```bash
    npm run build
    ```
