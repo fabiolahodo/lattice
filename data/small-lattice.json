@@ -1,0 +1,32 @@
+{
+    "nodes": [
+    { "id": 1, "label": "1\n{T4}\n{a, b, c}", "level":4 },
+    { "id": 2, "label": "2\n{T1, T2, T4, T6}\n{b}", "level": 2 },
+    { "id": 3, "label": "3\n{T3, T4, T6}\n{c}", "level": 2 },
+    { "id": 4, "label": "4\n{T1, T5}\n{d}", "level": 2 },
+    { "id": 5, "label": "5\n{T2, T7}\n{e}", "level": 2 },
+    {"id":"Bottom Concept",  "label": "6\n{}\n{a, b, c, d, e}", "level":5},
+    { "id": 7, "label": "7\n{T4, T6}\n{b, c}", "level": 3 },
+    { "id": 8, "label": "8\n{T1}\n{b, d}", "level": 3 },
+    { "id": 9, "label": "9\n{T2}\n{b, e}", "level": 3},
+    { "id":"Top Concept","label": "10\n{T1, T2, T3, T4, T5, T6}\n{} ", "level": 1}
+    
+  ],
+
+  "links": [
+    { "source": "Top Concept", "target": 2 },
+    { "source": "Top Concept", "target": 3 },
+    { "source": "Top Concept", "target": 4 },
+    { "source": "Top Concept", "target": 5 },
+    { "source": 2, "target": 7 },
+    { "source": 2, "target": 8 },
+    { "source": 2, "target": 9 },
+    { "source": 3, "target": 7 },
+    { "source": 7, "target": 1 },
+    { "source": 4, "target": 8 },
+    { "source": 5,"target": 9 },
+    { "source": 8, "target": "Bottom Concept"},
+    { "source": 9, "target": "Bottom Concept" },
+    { "source": 1, "target": "Bottom Concept" }
+    ]
+}

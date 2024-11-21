@@ -1,0 +1,15 @@
+{
+    "nodes": [
+      { "id": "Top Concept", "level": 1 },
+      { "id": "Concept A", "level": 2 },
+      { "id": "Concept B", "level": 2 },
+      { "id": "Bottom Concept", "level": 3 }
+    ],
+    "links": [
+      { "source": "Top Concept", "target": "Concept A" },
+      { "source": "Top Concept", "target": "Concept B" },
+      { "source": "Concept A", "target": "Bottom Concept" },
+      { "source": "Concept B", "target": "Bottom Concept" }
+    ]
+  }
+  
