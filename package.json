@@ -13,7 +13,8 @@
     "start": "live-server ./ --port=8080",
     "build": "rollup src/index.js --file dist/bundle.js --format esm --plugin @rollup/plugin-node-resolve",
     "watch": "rollup -c --watch",
-    "dev": "npm-run-all --parallel watch start"
+    "dev": "npm-run-all --parallel watch start",
+    "docs": "jsdoc -c docs/api/jsdoc.conf.json"
   },
   "keywords": [],
   "author": "Fabiola Hodo",

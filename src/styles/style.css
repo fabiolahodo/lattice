@@ -6,10 +6,34 @@ html, body {
   
   #graph-container {
     width: 100%;
-    height: 100%;
+    height: 100vh; /* Ensure the graph takes the full viewport height */
     display: flex;
     justify-content: center;
     align-items: center;
     background-color: #f9f9f9;
+    overflow: hidden; /* Prevent accidental graph overflow */
+    position: relative;
   }
+
+  #tooltip {
+    position: absolute;
+    display: none;
+    background: #fff;
+    color: #333;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+#selected-node-info
+{
+margin: 10px 0; 
+font-family: Arial, sans-serif; 
+font-size: 14px; 
+color: #333;
+}
+
   

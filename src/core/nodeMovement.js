@@ -1,7 +1,24 @@
+// src/core/nodeMovement.js
+
+// Import necessary dependencies
+import { GRAPH_CONFIG } from './config.js';
+
+/**
+ * Applies constraints to node positions.
+ * @param {Object} graphData - The graph data containing nodes and links.
+ * @param {number} width - Width of the graph area.
+ * @param {number} height - Height of the graph area.
+ */
+
 export function applyNodeConstraints(graphData, width, height) {
-  const padding = 30; // Define padding to maintain a gap between nodes
+  const padding = GRAPH_CONFIG.dimensions.padding; // Use dynamic padding from config to maintain a gap between nodes
   
-  // Helper function to find linked nodes
+  /**
+   * Helper function to find nodes linked to a given node.
+   * @param {string} nodeId - The ID of the node to find linked nodes for.
+   * @returns {Array} - Array of linked nodes.
+   */
+
   function getLinkedNodes(nodeId) {
     return graphData.links
       .filter(link => link.source.id === nodeId || link.target.id === nodeId)
@@ -13,10 +30,10 @@ export function applyNodeConstraints(graphData, width, height) {
   graphData.nodes.forEach(node => {
     if (node.id === 'Top Concept') {
       // Constrain the 'Top Concept' to be at the top of the graph (fixed level)
-      node.y = Math.min(node.y, 50); // Keep it fixed at the top, for example, 50px away from the top
+      node.y = Math.min(node.y, GRAPH_CONFIG.constraints.topY); // Keep it fixed at the top, for example, 50px away from the top
     } else if (node.id === 'Bottom Concept') {
       // Constrain the 'Bottom Concept' to be at the bottom of the graph (fixed level)
-      node.y = Math.max(node.y, height - 50); // Keep it fixed at the bottom, for example, 50px away from the bottom
+      node.y = Math.max(node.y, height - GRAPH_CONFIG.constraints.bottomY); // Keep it fixed at the bottom, for example, 50px away from the bottom
     } else {
       /* For other nodes, constrain them based on the level
       const topY = Math.min(...graphData.nodes.filter(n => n.id === 'Top Concept').map(n => n.y));
@@ -33,10 +50,11 @@ export function applyNodeConstraints(graphData, width, height) {
     */
       // Constrain inner nodes based on their neighbors
       const linkedNodes = getLinkedNodes(node.id);
+
       const upperNeighbors = linkedNodes.filter(n => n.level < node.level);
       const lowerNeighbors = linkedNodes.filter(n => n.level > node.level);
 
-      // Calculate the bounds based on neighbors
+      // Calculate constraints based on neighbors
       const topY = upperNeighbors.length > 0
         ? Math.max(...upperNeighbors.map(n => n.y + padding)) // Ensure node stays below its upper neighbors
         : 0; // No upper neighbors, fallback to the top of the graph

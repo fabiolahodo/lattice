@@ -947,36 +947,6 @@ function pointer(event, node) {
   return [event.pageX, event.pageY];
 }
 
-function extent(values, valueof) {
-  let min;
-  let max;
-  if (valueof === undefined) {
-    for (const value of values) {
-      if (value != null) {
-        if (min === undefined) {
-          if (value >= value) min = max = value;
-        } else {
-          if (min > value) min = value;
-          if (max < value) max = value;
-        }
-      }
-    }
-  } else {
-    let index = -1;
-    for (let value of values) {
-      if ((value = valueof(value, ++index, values)) != null) {
-        if (min === undefined) {
-          if (value >= value) min = max = value;
-        } else {
-          if (min > value) min = value;
-          if (max < value) max = value;
-        }
-      }
-    }
-  }
-  return [min, max];
-}
-
 var noop = {value: () => {}};
 
 function dispatch() {
@@ -3839,7 +3809,7 @@ function simulation(nodes) {
   };
 }
 
-function forceManyBody() {
+function manyBody() {
   var nodes,
       node,
       random,
@@ -4462,68 +4432,214 @@ function zoom() {
   return zoom;
 }
 
+// src/core/config.js
+// Central configuration file to avoid hardcoding
+
+const GRAPH_CONFIG = {
+    dimensions: {
+      width: 800, // Default width of the graph
+      height: 600, // Default height of the graph
+      padding: 50, // Padding around the graph
+    },
+    node: {
+      defaultRadius: 10, // Default radius for nodes
+      color: 'blue', // Default node color
+      selectedColor: 'red', // Color for selected nodes
+      labelOffset: 15, // Distance of labels from nodes
+    },
+    link: {
+      color: '#ccc', // Default color for links
+      thickness: 2, // Default thickness of links
+      highlightedColor: 'red', // Color for highlighted links
+      minDistance: 30, // Minimum link distance
+      minThickness: 2, // Minimum link thickness
+    },
+    constraints: {
+      topY: 50, // Minimum y-position for the top concept
+      bottomY: 50, // Maximum y-position for the bottom concept
+    },
+    zoom: {
+      scaleExtent: [0.1, 10], // Zoom range: 10% to 1000%
+    },
+    simulation: {
+        collisionFactor: 0.8, // Multiplier for collision radius
+        chargeFactor: 5, // Multiplier for charge/repulsion strength
+      },
+  };
+
+//src/core/interactivity.js
+
+/**
+ * Adds interactivity to the graph, including zoom, pan, and drag behaviors to the graph.
+ * @param {Object} svg - The SVG element containing the graph.
+ * @param {Object} simulation - The D3 force simulation instance.
+ */
+
+function addInteractivity(svg, simulation) {
+  //const g = svg.append('g').attr('class', 'graph-transform');
+  
+  // Select the graph transform group for applying transformations
+  const g = svg.select('.graph-transform');
+
+  // Add zoom behavior
+  svg.call(
+    zoom()
+      .scaleExtent(GRAPH_CONFIG.zoom.scaleExtent) // Zoom scale limits (10% to 1000%)
+      .on('zoom', (event) => {
+        // Apply zoom and pan transformations to the graph group
+        g.attr('transform', event.transform);
+      })
+  );
+
+  /*
+  g.append(() => svg.select('.links').node());
+  g.append(() => svg.select('.nodes').node());
+  */
+  // Add drag behavior to nodes
+  g.selectAll('.node')
+    .call(
+      drag()
+        .on('start', (event, d) => {
+          // Start dragging: increase simulation alpha to allow movement
+          if (!event.active) simulation.alphaTarget(0.3).restart();
+          d.fx = d.x; // Fix x position during drag
+          d.fy = d.y; // Fix y position during drag
+        })
+        .on('drag', (event, d) => {
+          // During drag: update fixed positions to follow the cursor
+          d.fx = event.x;
+          d.fy = event.y;
+        })
+        .on('end', (event, d) => {
+          // End dragging: release fixed positions
+          if (!event.active) simulation.alphaTarget(0);
+          d.fx = null;
+          d.fy = null;
+        })
+    );
+}
+
+/**
+ * Adds node-specific interactivity (hover, click) to the graph.
+ * @param {Object} nodeGroup - The selection of nodes in the graph.
+ * @param {Object} linkGroup - The selection of links in the graph.
+ */
+
+function addNodeInteractivity(nodeGroup, linkGroup) {
+  nodeGroup
+    .on('mouseover', function (event, d) {
+      // Show tooltip on hover
+      select('#tooltip')
+        .style('left', `${event.pageX + 10}px`) // Position tooltip near the mouse
+        .style('top', `${event.pageY + 10}px`)
+        .style('display', 'inline-block') // Make tooltip visible
+        .html(`ID: ${d.id}<br>Label: ${d.label}`); // Display node ID and label
+    })
+    .on('mouseout', () => {
+      // Hide tooltip when mouse leaves the node
+      select('#tooltip').style('display', 'none');
+    })
+    .on('click', function (event, clickedNode) {
+      // Handle node selection
+      // Update the UI with the selected node's information
+      select('#selected-node-info').html(
+        `Selected Node<br>ID: ${clickedNode.id}<br>Label: ${clickedNode.label}`
+      );
+
+      // Change color of clicked node
+      select(this).attr('fill', GRAPH_CONFIG.node.selectedColor); // Change node color to red
+
+      // Highlight connected links
+      linkGroup
+        .attr('stroke', (link) =>
+          link.source.id === clickedNode.id || link.target.id === clickedNode.id
+            ? GRAPH_CONFIG.link.highlightedColor // Highlight linked edges in red
+            : GRAPH_CONFIG.link.color // Reset other edges to default
+        )
+        .attr('stroke-width', (link) =>
+          link.source.id === clickedNode.id || link.target.id === clickedNode.id
+            ? 4 // Thicker line for connected edges
+            : GRAPH_CONFIG.link.thickness // Default thickness for others
+        );
+
+      // Reset colors of other nodes
+      nodeGroup.attr('fill', (node) =>
+        node.id === clickedNode.id 
+      ? GRAPH_CONFIG.node.selectedColor // Keep clicked node highlighted 
+      : GRAPH_CONFIG.node.color // Default color for others
+      );
+    });
+}
+
 //src/core/rendering.js 
 
+/**
+ * Renders the graph with nodes and links
+ * @param {string} container - The CSS selector for the container
+ * @param {Object} graphData - The graph data containing nodes and links
+ * @param {Object} options - Options for width and height of the SVG
+ * @returns {Object} - References to the SVG and groups created
+ */
+
 function renderGraph(container, graphData, options) {
-  const { width, height } = options;
+  //const { width, height } = options; // Destructure options for width and height
+  
+  const { width, height, padding } = { ...GRAPH_CONFIG.dimensions, ...options };
 
-  // Create SVG
+  /* Validate graph data
+  if (!graphData || !graphData.nodes || !graphData.links) {
+    console.error('Invalid graph data:', graphData);
+    return;
+  }
+
+  // Dynamically calculate the size of the SVG container
+  const containerNode = d3.select(container).node(); // Select the container element
+  const containerRect = containerNode.getBoundingClientRect() || { width, height }; // Get the dimensions (width/height) of the container
+ 
+  // Ensure containerRect dimensions are valid
+  if (!containerRect || containerRect.width === 0 || containerRect.height === 0) {
+    console.error('Invalid container dimensions:', containerRect);
+    return;
+  }
+  
+  const svgWidth = containerRect.width || width; // Use container width or fallback to viewport width
+  const svgHeight = containerRect.height || height; // Use container height or fallback to viewport height
+
+  // Dynamically calculate padding based on the size of the graph (number of nodes)
+  const dynamicPadding = Math.max(padding, Math.sqrt(graphData.nodes.length || 1) * 10); // Scale padding to fit graph dynamically
+*/
+  // Create SVG element in the specified container
   const svg = select(container)
-    .append('svg')
-      .attr('width', width)
-      .attr('height', height);
+    .append('svg') // Append an SVG element to the container
+      .attr('width', width) // Set dynamic width
+      .attr('height', height) // Set dynamic height
+      .style('overflow', 'visible'); // Allow content to overflow the container if needed)
 
-  //Create a <g> element to center the graph
+  //Create a <g> group element to center and transform the graph
   const g = svg.append('g')
     .attr('class', 'graph-transform')
     .attr('transform', `translate(${width / 2}, ${height / 2})`);
   
-
-  /* Create a <g> element for transformations
-  const g = svg.append('g')
-    .attr('class', 'graph-transform');
-  */
-  // Draw links
+    // Draw links
   const linkGroup = g.selectAll('.link')
-    .data(graphData.links)
-    .enter()
-    .append('line')
-    .attr('class', 'link')
-    .attr('stroke', '#ccc')
-    .attr('stroke-width', 2);
+    .data(graphData.links) // Bind the links data
+    .enter() // Process each link in the data
+    .append('line') // Append a <line> element for each link
+    .attr('class', 'link') // Add a class for stylingGRAPH_CONFIG.link.minThickness, d.weight || GRAPH_CONFIG.link.defaultThickness)
+    .attr('stroke', GRAPH_CONFIG.link.color) // Default link color
+    .attr('stroke-width', d => Math.max(GRAPH_CONFIG.link.minThickness, d.weight || GRAPH_CONFIG.link.thickness)); // Dynamic link thickness based on weight
 
   // Draw nodes
-  const nodeGroup = g.selectAll('.node')
-    .data(graphData.nodes)
-    .enter()
-    .append('circle')
-    .attr('class', 'node')
-    .attr('r', 20)
-    .attr('fill', 'blue')
-    .on('click', function (event, clickedNode) {
-      // Change color of clicked node
-      select(this).attr('fill', 'red'); // Change node color to red
-    
-      // Highlight connected links
-      linkGroup
-        .attr('stroke', link =>
-          link.source.id === clickedNode.id || link.target.id === clickedNode.id
-            ? 'red' // Highlight linked edges in red
-            : '#ccc' // Reset other edges to default
-        )
-        .attr('stroke-width', link =>
-          link.source.id === clickedNode.id || link.target.id === clickedNode.id
-            ? 4 // Thicker line for connected edges
-            : 2 // Default thickness for others
-        );
-
-      // Reset colors of other nodes
-      nodeGroup.attr('fill', node =>
-        node.id === clickedNode.id ? 'red' : 'blue'
-      );
-    });
+  const nodeGroup = g.selectAll('.node') // Select all nodes (none exist initially)
+    .data(graphData.nodes) // Bind the nodes data
+    .enter() // Process each node in the data
+    .append('circle') // Append a <circle> element for each node
+    .attr('class', 'node') // Add a class for styling
+    .attr('r', GRAPH_CONFIG.node.defaultRadius) // Radius of the node
+    //.attr('r', d =>Math.max(5, 100 / Math.sqrt(graphData.nodes.length))) // Dynamic radius
+    .attr('fill',  GRAPH_CONFIG.node.color); // Default node color
       
-    // Add node labels
+    // Adjust label position dynamically based on node's position
     const labelGroup = g.selectAll('.node-label')
       .data(graphData.nodes)
       .enter()
@@ -4531,58 +4647,157 @@ function renderGraph(container, graphData, options) {
       .attr('class', 'node-label')
       .attr('text-anchor', 'middle') // Center text horizontally
       //.attr('dy', d => d.y > height / 2 ? 25 : -25) // Position label above or below node
+      .attr('dy', d => (d.y < height / 2 ? -GRAPH_CONFIG.node.labelOffset : GRAPH_CONFIG.node.labelOffset)) // Position label above or below based on node's vertical location
+      //.text(d => d.label || d.id); // Fallback to ID if no label is provided
       .text(d => d.id);
 
-  console.log('SVG Structure:', svg.node());
+     /* Delay to ensure rendering is complete before calling getBBox()
+    setTimeout(() => {// Adjust the SVG size dynamically based on the rendered content
+     const groupNode = g.node();
 
+      if (!groupNode) {
+        console.error('Graph transform group is not found.');
+        return;
+      }
+    
+    const bbox = g.node().getBBox(); // Get the bounding box of the rendered graph
+    
+    if (!bbox || isNaN(bbox.width) || isNaN(bbox.height)) {
+      console.error('Invalid bounding box:', bbox);
+      return;
+    }
+      console.log('Bounding Box:', bbox);
+
+    svg.attr('width', Math.max(bbox.width + dynamicPadding * 2, svgWidth)); // Adjust SVG width to fit the graph with padding
+    svg.attr('height', Math.max(bbox.height + dynamicPadding * 2, svgHeight)); // Adjust SVG height to fit the graph with padding
+    // Center the graph dynamically
+      centerGraph(svg, { width: svgWidth, height: svgHeight, padding: dynamicPadding, bbox });// Dynamically center the graph within the SVG
+ 
+        svg.attr('width', bbox.width + padding * 2)
+           .attr('height', bbox.height + padding * 2);
+        
+           // Pass the correct bbox object to centerGraph
+        centerGraph(svg, { width, height, padding, bbox });
+      }, 100); // Delay ensures the graph is fully rendered before centering
+*/
+    // Add interactivity to nodes
+    addNodeInteractivity(nodeGroup, linkGroup);
+
+    console.log('SVG Structure:', svg.node());
+
+    // Return references to the SVG and its groups for further manipulation
     return  { svg, linkGroup, nodeGroup, labelGroup };
 }
 
-function centerGraph(svg, graphData, width, height) {
+/**
+ * Centers the graph dynamically within the SVG.
+ * @param {Object} svg - The SVG element containing the graph.
+ * @param {Object} options - Configuration options for dimensions and padding.
+ */
+
+function centerGraph(svg, { width, height, padding, bbox }) {
+  //const { width, height, padding } = { ...GRAPH_CONFIG.dimensions, ...options };
+  
   const g = svg.select('.graph-transform');
 
-  // Calculate graph bounds
-  const xExtent = extent(graphData.nodes, d => d.x || 0); // Default to 0 if undefined
-  const yExtent = extent(graphData.nodes, d => d.y || 0);
+  /* Ensure the group contains elements before calculating the bounding box
+  if (g.empty() || !bbox()) {
+    console.error('Graph transform group is empty or bounding box is invalid.');
+    return;
+  }
 
-  // Fallback if extents are invalid
-  const xCenter = (xExtent[0] + xExtent[1]) / 2 || 0; // Center of x-range
-  const yCenter = (yExtent[0] + yExtent[1]) / 2 || 0; // Center of y-range
+  /*Get the bounding box of the group element
+  const bbox = g.node().getBBox();
 
-  // Calculate translation to center graph in SVG
-  const translateX = width / 2 - xCenter;
-  const translateY = height / 2 - yCenter;
+  // Check for invalid bounding box values
+  if (!bbox || isNaN(bbox.width) || isNaN(bbox.height)) {
+    console.error('Invalid bounding box:', bbox);
+    return;
+  }
 
+
+  // Dynamically calculate padding based on the graph size (bounding box dimensions)
+  const dynamicPadding = Math.max(padding, Math.sqrt(bbox.width * bbox.height) / 10); // Adjust factor for better results
+  console.log('Dynamic Padding:', dynamicPadding);
+  
+  // Calculate bounding box of the graph
+  const graphWidth = bbox.width;
+  const graphHeight = bbox.height; 
+  
+
+  // Dynamically ensure container width and height are valid
+  const svgWidth = width || GRAPH_CONFIG.dimensions.width; // Default to 800 if not provided
+  const svgHeight = height || GRAPH_CONFIG.dimensions.height; // Default to 600 if not provided
+ 
+  //Dynamically calculate padding based on graph size
+  const horizontalPadding = Math.max((width - graphWidth) / 4, 20); // Ensure at least 20px padding
+  const verticalPadding = Math.max((height - graphHeight) / 4, 20); // Ensure at least 20px padding
+  
+
+  if (!bbox || typeof bbox !== 'object') {
+    console.error('Invalid bounding box:', bbox);
+    return;
+  }
+*/
+  // Calculate the center of the graph
+  const graphCenterX = bbox.x + bbox.width / 2;
+  const graphCenterY = bbox.y + bbox.height / 2;
+
+  // Calculate the center of the SVG container with padding applied
+  const svgCenterX = width / 2;
+  const svgCenterY = height / 2;
+
+ // Calculate translation needed to center the graph in the SVG
+  const translateX = svgCenterX - graphCenterX; // Center horizontally;
+  const translateY = svgCenterY - graphCenterY; // Center vertically
+
+ /* if (isNaN(svgCenterX) || isNaN(svgCenterY)) {
+    console.error('Invalid SVG center:', svgCenterX, svgCenterY);
+    return;
+  }
+
+  // Adjust the SVG view box to include dynamic padding
+  const adjustedWidth = bbox.width + dynamicPadding * 2;
+  const adjustedHeight = graphHeight + dynamicPadding * 2;
+  const adjustedX = bbox.x - dynamicPadding;
+  const adjustedY = bbox.y - dynamicPadding;
+
+  // Debugging logs
+  console.log('Bounding Box:', bbox);
+  console.log('Container Rect:', containerRect);
+  console.log('Graph Center (X, Y):', graphCenterX, graphCenterY);
+  console.log('SVG Center (X, Y):', svgCenterX, svgCenterY);
+  console.log('Translation (X, Y):', translateX, translateY);
+*/
   // Apply translation to center the graph
   g.attr('transform', `translate(${translateX}, ${translateY})`);
+  
+  /* Adjust the SVG viewBox for dynamic scaling
+  svg.attr(
+    'viewBox',
+    `${adjustedX} ${adjustedY} ${adjustedWidth} ${adjustedHeight}`
+  ).attr('preserveAspectRatio', 'xMidYMid meet');
+  */
 }
 
-/*export function centerGraph(svg, graphData, width, height) {
-  const g = svg.select('.graph-transform');
+// src/core/nodeMovement.js
 
-  // Calculate bounding box of the graph
-  const nodes = graphData.nodes;
-  const xExtent = d3.extent(nodes, (d) => d.x);
-  const yExtent = d3.extent(nodes, (d) => d.y);
-
-  // Calculate center of the graph
-  const graphWidth = xExtent[1] - xExtent[0];
-  const graphHeight = yExtent[1] - yExtent[0];
-  const graphCenterX = xExtent[0] + graphWidth / 2;
-  const graphCenterY = yExtent[0] + graphHeight / 2;
-
-  // Calculate translation to center the graph in the SVG
-  const translateX = width / 2 - graphCenterX;
-  const translateY = height / 2 - graphCenterY;
-
-  // Apply translation to the graph
-  g.attr('transform', `translate(${translateX}, ${translateY})`);
-}*/
+/**
+ * Applies constraints to node positions.
+ * @param {Object} graphData - The graph data containing nodes and links.
+ * @param {number} width - Width of the graph area.
+ * @param {number} height - Height of the graph area.
+ */
 
 function applyNodeConstraints(graphData, width, height) {
-  const padding = 30; // Define padding to maintain a gap between nodes
+  const padding = GRAPH_CONFIG.dimensions.padding; // Use dynamic padding from config to maintain a gap between nodes
   
-  // Helper function to find linked nodes
+  /**
+   * Helper function to find nodes linked to a given node.
+   * @param {string} nodeId - The ID of the node to find linked nodes for.
+   * @returns {Array} - Array of linked nodes.
+   */
+
   function getLinkedNodes(nodeId) {
     return graphData.links
       .filter(link => link.source.id === nodeId || link.target.id === nodeId)
@@ -4594,10 +4809,10 @@ function applyNodeConstraints(graphData, width, height) {
   graphData.nodes.forEach(node => {
     if (node.id === 'Top Concept') {
       // Constrain the 'Top Concept' to be at the top of the graph (fixed level)
-      node.y = Math.min(node.y, 50); // Keep it fixed at the top, for example, 50px away from the top
+      node.y = Math.min(node.y, GRAPH_CONFIG.constraints.topY); // Keep it fixed at the top, for example, 50px away from the top
     } else if (node.id === 'Bottom Concept') {
       // Constrain the 'Bottom Concept' to be at the bottom of the graph (fixed level)
-      node.y = Math.max(node.y, height - 50); // Keep it fixed at the bottom, for example, 50px away from the bottom
+      node.y = Math.max(node.y, height - GRAPH_CONFIG.constraints.bottomY); // Keep it fixed at the bottom, for example, 50px away from the bottom
     } else {
       /* For other nodes, constrain them based on the level
       const topY = Math.min(...graphData.nodes.filter(n => n.id === 'Top Concept').map(n => n.y));
@@ -4614,10 +4829,11 @@ function applyNodeConstraints(graphData, width, height) {
     */
       // Constrain inner nodes based on their neighbors
       const linkedNodes = getLinkedNodes(node.id);
+
       const upperNeighbors = linkedNodes.filter(n => n.level < node.level);
       const lowerNeighbors = linkedNodes.filter(n => n.level > node.level);
 
-      // Calculate the bounds based on neighbors
+      // Calculate constraints based on neighbors
       const topY = upperNeighbors.length > 0
         ? Math.max(...upperNeighbors.map(n => n.y + padding)) // Ensure node stays below its upper neighbors
         : 0; // No upper neighbors, fallback to the top of the graph
@@ -4637,22 +4853,30 @@ function applyNodeConstraints(graphData, width, height) {
 }
 
 // src/core/simulation.js
+
 /**
  * Creates and configures a D3 force simulation.
  * @param {Object} graphData - The graph data containing nodes and links.
+ * @param {Object} linkGroup - The D3 selection for links.
+ * @param {Object} nodeGroup - The D3 selection for nodes.
+ * @param {Object} labelGroup - The D3 selection for labels.
  * @param {Object} options - Configuration options for the simulation.
- * @param {number} options.width - The width of the simulation area.
- * @param {number} options.height - The height of the simulation area.
  * @returns {Object} - A configured D3 force simulation instance.
  */
-function createSimulation(graphData, linkGroup, nodeGroup, labelGroup, options) {
-  const { width, height } = options;
 
-  // Initialize node positions if undefined
+function createSimulation(graphData, linkGroup, nodeGroup, labelGroup, options) {
+  const { width, height } = { ...GRAPH_CONFIG.dimensions, ...options };
+
+  /* Initialize node positions if undefined
   graphData.nodes.forEach(node => {
     if (node.x === undefined) node.x = width / 2;
     if (node.y === undefined) node.y = height / 2;
   });
+*/
+ graphData.nodes.forEach((node) => {
+        node.x = node.x || width / 2;
+        node.y = node.y || height / 2;
+    });
 
   /* Dynamically calculate max link distance based on dataset size and canvas dimensions
   const baseDistance = Math.min(width, height) / 5; // A baseline distance proportional to the canvas size
@@ -4663,17 +4887,29 @@ function createSimulation(graphData, linkGroup, nodeGroup, labelGroup, options) 
     return Math.max(dynamicDistance / (levelDiff + 1), 50); // Ensure minimum distance of 50
   };
 */
+
+// Dynamically adjust force parameters
+const baseDistance = Math.min(width, height) / 5; // Base distance relative to canvas size
+const dynamicDistance = Math.max(GRAPH_CONFIG.link.minDistance, baseDistance / Math.sqrt(graphData.nodes.length)); // Link distance scales with node count
+const collisionRadius = dynamicDistance * GRAPH_CONFIG.simulation.collisionFactor; // Collision radius relative to link distance
+const chargeStrength = -dynamicDistance * GRAPH_CONFIG.simulation.chargeFactor; // Dynamic charge/repulsion strength
+
   const simulation$1 = simulation(graphData.nodes)
-    //.force('link', d3.forceLink(graphData.links).id(d => d.id).distance(linkDistance)) // Apply dynamic link distance
-    .force('link', link(graphData.links).id(d => d.id).distance(150))
+    /*.force('link', d3.forceLink(graphData.links).id(d => d.id).distance(150))
     .force('charge', forceManyBody().strength(-500)) // Stronger repulsion
-    .force('collision', collide().radius(40)) // Add collision force with radius slightly larger than node size
+    .force('collision', d3.forceCollide().radius(40)) // Add collision force with radius slightly larger than node size
     //.force('center', d3.forceCenter(0, 0)) // Center at (0, 0)
-    .force('center', center(width / 2, height / 2)) // Center the graph
+    .force('center', d3.forceCenter(width / 2, height / 2)) // Center the graph
+    */
+    .force('link', link(graphData.links).id(d => d.id).distance(dynamicDistance)) // Dynamic link distance
+    .force('charge', manyBody().strength(chargeStrength)) // Adjust repulsion dynamically
+    .force('collision', collide().radius(collisionRadius)) // Dynamic collision radius
+    .force('center', center(width / 2, height / 2)) // Center graph
     .on('tick', () => {
       // Apply node constraints
       applyNodeConstraints(graphData, width, height);
-
+      
+      // Update positions dynamically on every tick
        // Update link positions
       linkGroup
         .attr('x1', d => d.source.x)
@@ -4692,71 +4928,70 @@ function createSimulation(graphData, linkGroup, nodeGroup, labelGroup, options) 
       // Update label positions dynamically
       labelGroup
         .attr('x', d => d.x)
-        .attr('y', d => d.y + 25); // Adjust below the node
+        .attr('y', d => d.y + GRAPH_CONFIG.node.labelOffset); // Adjust below the node
     }); 
   
     return simulation$1;
   }
 
-//src/core/interactivity.js
-function addInteractivity(svg, simulation) {
-  //const g = svg.append('g').attr('class', 'graph-transform');
-  const g = svg.select('.graph-transform');
-
-  // Add zoom behavior
-  svg.call(
-    zoom()
-      .scaleExtent([0.1, 10]) // Zoom scale limits
-      .on('zoom', (event) => {
-        g.attr('transform', event.transform);
-      })
-  );
-
-  /*
-  g.append(() => svg.select('.links').node());
-  g.append(() => svg.select('.nodes').node());
-  */
-  // Add drag behavior to nodes
-  g.selectAll('.node')
-    .call(
-      drag()
-        .on('start', (event, d) => {
-          if (!event.active) simulation.alphaTarget(0.3).restart();
-          d.fx = d.x;
-          d.fy = d.y;
-        })
-        .on('drag', (event, d) => {
-          d.fx = event.x;
-          d.fy = event.y;
-        })
-        .on('end', (event, d) => {
-          if (!event.active) simulation.alphaTarget(0);
-          d.fx = null;
-          d.fy = null;
-        })
-    );
-}
-
 //src/core/lattice.js
-function createLattice(graphData, options = {}) {
-  const { container = 'body', width = 800, height = 600 } = options;
 
-   // Ensure options are passed properly
+/**
+ * Creates a concept lattice based on the provided graph data.
+ * @param {Object} graphData - The graph data containing nodes and links.
+ * @param {Object} options - Configuration options for the graph.
+ * @returns {Object} - The SVG and simulation instances for further use.
+ */
+
+function createLattice(graphData, options = {}) {
+  //const { container = 'body', width = 800, height = 600 } = options;
+  
+  // Merge options with defaults from the config file
+  const { container = 'body', width, height } = {
+    ...GRAPH_CONFIG.dimensions,
+    ...options,
+};
+   
+  // Validate graph data
    if (!graphData || !graphData.nodes || !graphData.links) {
     throw new Error('Invalid graphData. Ensure it includes nodes and links.');
   }
 
+  // Render the graph using dynamic dimensions and get the SVG elements
   const { svg, linkGroup, nodeGroup, labelGroup } = renderGraph(container, graphData, { width, height });
   //const g = svg.select('.graph-transform'); // Select the `g` group
+ 
+  /* Adjust the graph transform group for padding from config
+  const padding =  GRAPH_CONFIG.dimensions.padding;
+  svg
+    .attr('width', GRAPH_CONFIG.dimensions.padding * 2) // Increase SVG width with dynamic padding
+    .attr('height', GRAPH_CONFIG.dimensions.padding * 2); // Increase SVG height with dynamic padding
+
+  // Adjust the translation of the graph transform group
+  const g = svg.select('.graph-transform');
+  g.attr('transform', `translate(${width / 2 + padding}, ${height / 2 + padding})`);
+  */
+  // Create the simulation and add interactivity
   const simulation = createSimulation(graphData, linkGroup, nodeGroup,labelGroup, { width, height });
 
+  // Add interactivity after creating the simulation
   addInteractivity(svg, simulation);
 
-   // Center graph after initial rendering
-   centerGraph(svg, graphData, width, height);
+   /*Center graph dynamically after initial rendering
+   centerGraph(svg,{width, height});
+  */
+ // Dynamically center the graph
+ //const graphGroup = svg.select('.graph-transform');
+ setTimeout(() => {
+  const bbox = svg.select('.graph-transform').node().getBBox();
+  centerGraph(svg, { width, height, padding: GRAPH_CONFIG.dimensions.padding, bbox });
+ }, 100);
 
+  // Return the SVG and simulation for further use
   return { svg, simulation };
 }
+
+// src/index.js 
 
 document.addEventListener('DOMContentLoaded', () => {
   // Get the dataset path from the script tag's data-dataset attribute
@@ -4766,20 +5001,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (!datasetPath) {
     console.error('Dataset path not provided in the script tag.');
-    return;
+    return; // Stop execution if dataset path is missing
   }
 
-  // Fetch graph data from the specified JSON file
+  /* Fetch graph data from the specified JSON file
   fetch(datasetPath)
-    .then(response => response.json())
+    .then(response => {
+     // Check if the response is valid
+     if (!response.ok) {
+      throw new Error(`Failed to fetch dataset: ${response.statusText}`);
+    }
+    return response.json() // Parse JSON data
+  })
     .then(graphData => {
-      createLattice(graphData, {
-        container: '#graph-container', // Matches the ID in your HTML
-        width: 800,
-        height: 600,
+      const { width, height } = GRAPH_CONFIG.dimensions;
+
+       // Create the concept lattice graph
+       const { svg } = createLattice(graphData, {
+        container: '#graph-container', // Specify the graph container that matches the ID in your HTML
+        width,
+        height,
       });
+
+      // Adjust the height of the container dynamically based on the graph size
+      const graphContainer = document.getElementById('graph-container');
+      //const svg = document.querySelector('#graph-container svg'); // Select the SVG element created for the graph
+      
+        if (svg) {
+          const bbox = svg.getBBox(); // Get bounding box of the graph
+          //const { width, height } = bbox; 
+          const padding = GRAPH_CONFIG.dimensions.padding;
+
+          //const { width: bboxWidth, height: bboxHeight } = bbox;
+
+        // Dynamically adjust the container and SVG sizes
+        graphContainer.style.height = `${bbox.height + padding * 2}px`; // Add some padding to avoid cuts
+        svg.setAttribute('width', bbox.width + padding * 2); // Adjust SVG width with padding
+        svg.setAttribute('height', bbox.height + padding * 2); // Adjust SVG height with padding
+      }
     })
-    .catch(error => {
+      .catch(error => {
       console.error('Error loading graph data:', error);
-    });
+    });*/
+
+    fetch(datasetPath)
+        .then((res) => res.json())
+        .then((data) => createLattice(data, { container: '#graph-container', ...GRAPH_CONFIG.dimensions }))
+        .catch((err) => console.error('Error loading data:', err));
 });
