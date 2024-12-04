@@ -55,4 +55,10 @@ You can test the library by running the provided examples.
      ```bash
      live-server examples/basic-example
      ```
+     OR
+     Serve the project from the root directory by:
+      ```bash
+     live-server 
+     ```
+
 2. Open your browser and interact with the graph.
