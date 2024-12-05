@@ -78,13 +78,46 @@ export function addNodeInteractivity(nodeGroup, linkGroup) {
     })
     .on('click', function (event, clickedNode) {
       // Handle node selection
-      // Update the UI with the selected node's information
-      d3.select('#selected-node-info').html(
-        `Selected Node<br>ID: ${clickedNode.id}<br>Label: ${clickedNode.label}`
-      );
+
+      // Find neighbors
+      const superconcepts = [];
+      const subconcepts = [];
+
+      linkGroup.each(function (link) {
+        if (link.source.id === clickedNode.id) {
+            subconcepts.push(link.target); // Outgoing link -> Subconcept
+        } else if (link.target.id === clickedNode.id) {
+            superconcepts.push(link.source); // Incoming link -> Superconcept
+        }
+    });
+
+    // Format neighbor information
+    const superconceptsInfo = superconcepts
+        .map((node) => `${node.id} (${node.label || 'No Label'})`)
+        .join(', ');
+    const subconceptsInfo = subconcepts
+        .map((node) => `${node.id} (${node.label || 'No Label'})`)
+        .join(', ');
+
+     // Update the UI with the selected node's information
+      d3.select('#selected-node-info').html(`
+        <strong>Selected Node</strong><br>
+        &ensp; & &emsp;ID: ${clickedNode.id}<br>
+        &ensp; & &emsp;Label: ${clickedNode.label || 'No Label'}<br>
+        <strong>Superconcepts</strong>:${superconceptsInfo || 'None'}<br>
+        <strong>Subconcepts:</strong> ${subconceptsInfo || 'None'}
+        `);
 
       // Change color of clicked node
-      d3.select(this).attr('fill', GRAPH_CONFIG.node.selectedColor); // Change node color to red
+      //d3.select(this).attr('fill', GRAPH_CONFIG.node.selectedColor); // Change node color to red
+
+      // Highlight clicked node and connected links
+      nodeGroup.attr('fill', (node) =>
+        node.id === clickedNode.id
+            ? GRAPH_CONFIG.node.selectedColor
+            : GRAPH_CONFIG.node.color
+    );
+
 
       // Highlight connected links
       linkGroup
