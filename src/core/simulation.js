@@ -30,7 +30,6 @@ export function createSimulation(graphData, linkGroup, nodeGroup, labelGroup, op
         node.x = node.x || width / 2;
         node.y = node.y || height / 2;
     });
-
   /* Dynamically calculate max link distance based on dataset size and canvas dimensions
   const baseDistance = Math.min(width, height) / 5; // A baseline distance proportional to the canvas size
   const dynamicDistance = (baseDistance / Math.sqrt(graphData.nodes.length)) * 2; // Adjust based on node count
@@ -41,11 +40,15 @@ export function createSimulation(graphData, linkGroup, nodeGroup, labelGroup, op
   };
 */
 
-// Dynamically adjust force parameters
+//Dynamically adjust force parameters
 const baseDistance = Math.min(width, height) / 5; // Base distance relative to canvas size
-const dynamicDistance = Math.max(GRAPH_CONFIG.link.minDistance, baseDistance / Math.sqrt(graphData.nodes.length)); // Link distance scales with node count
-const collisionRadius = dynamicDistance * GRAPH_CONFIG.simulation.collisionFactor; // Collision radius relative to link distance
-const chargeStrength = -dynamicDistance * GRAPH_CONFIG.simulation.chargeFactor; // Dynamic charge/repulsion strength
+const dynamicLinkDistance = Math.max(
+  GRAPH_CONFIG.link.minDistance, 
+  baseDistance / Math.sqrt(graphData.nodes.length)); // Link distance scales with node count
+//const collisionRadius = dynamicLinkDistance * GRAPH_CONFIG.simulation.collisionFactor; // Collision radius relative to link distance
+//const chargeStrength = -dynamicLinkDistance * GRAPH_CONFIG.simulation.chargeFactor; // Dynamic charge/repulsion strength
+const collisionRadius = Math.max(30, dynamicLinkDistance * GRAPH_CONFIG.simulation.collisionFactor); // Increased collision radius
+const chargeStrength = Math.min(-100, -dynamicLinkDistance * GRAPH_CONFIG.simulation.chargeFactor); // Stronger repulsion for larger graphs
 
   const simulation = d3.forceSimulation(graphData.nodes)
     /*.force('link', d3.forceLink(graphData.links).id(d => d.id).distance(150))
@@ -54,14 +57,11 @@ const chargeStrength = -dynamicDistance * GRAPH_CONFIG.simulation.chargeFactor; 
     //.force('center', d3.forceCenter(0, 0)) // Center at (0, 0)
     .force('center', d3.forceCenter(width / 2, height / 2)) // Center the graph
     */
-    .force('link', d3.forceLink(graphData.links).id(d => d.id).distance(dynamicDistance)) // Dynamic link distance
+    .force('link', d3.forceLink(graphData.links).id(d => d.id).distance(dynamicLinkDistance)) // Dynamic link distance
     .force('charge', d3.forceManyBody().strength(chargeStrength)) // Adjust repulsion dynamically
     .force('collision', d3.forceCollide().radius(collisionRadius)) // Dynamic collision radius
     .force('center', d3.forceCenter(width / 2, height / 2)) // Center graph
     .on('tick', () => {
-      // Apply node constraints
-      applyNodeConstraints(graphData, width, height);
-      
       // Update positions dynamically on every tick
        // Update link positions
       linkGroup
@@ -82,7 +82,19 @@ const chargeStrength = -dynamicDistance * GRAPH_CONFIG.simulation.chargeFactor; 
       labelGroup
         .attr('x', d => d.x)
         .attr('y', d => d.y + GRAPH_CONFIG.node.labelOffset); // Adjust below the node
-    }); 
+    
+      // Apply node constraints
+      applyNodeConstraints(graphData, width, height);
+
+      // Debug: Log positions of first few nodes and links
+  if (graphData.nodes.length > 0) {
+    console.log('Node positions:', graphData.nodes.slice(0, 5).map(n => ({ id: n.id, x: n.x, y: n.y })));
+  }
+  if (graphData.links.length > 0) {
+    console.log('Link positions:', graphData.links.slice(0, 5).map(l => ({ source: l.source.id, target: l.target.id })));
+  }
+      
+}); 
   
     return simulation;
   }

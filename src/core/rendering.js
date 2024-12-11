@@ -41,6 +41,16 @@ export function renderGraph(container, graphData, options) {
   // Dynamically calculate padding based on the size of the graph (number of nodes)
   const dynamicPadding = Math.max(padding, Math.sqrt(graphData.nodes.length || 1) * 10); // Scale padding to fit graph dynamically
 */
+
+// Calculate dynamic node radius based on graph size
+const dynamicRadius = Math.max(
+  GRAPH_CONFIG.node.minRadius,
+  Math.min(
+    GRAPH_CONFIG.node.maxRadius,
+    50 / Math.sqrt(graphData.nodes.length || 1) // Scale inversely with node count
+  )
+);
+
   // Create SVG element in the specified container
   const svg = d3.select(container)
     .append('svg') // Append an SVG element to the container
@@ -68,8 +78,9 @@ export function renderGraph(container, graphData, options) {
     .enter() // Process each node in the data
     .append('circle') // Append a <circle> element for each node
     .attr('class', 'node') // Add a class for styling
-    .attr('r', GRAPH_CONFIG.node.defaultRadius) // Radius of the node
+    //.attr('r', GRAPH_CONFIG.node.defaultRadius) // Radius of the node
     //.attr('r', d =>Math.max(5, 100 / Math.sqrt(graphData.nodes.length))) // Dynamic radius
+    .attr('r', dynamicRadius) // Use dynamic radius
     .attr('fill',  GRAPH_CONFIG.node.color) // Default node color
       
     // Adjust label position dynamically based on node's position
@@ -84,35 +95,47 @@ export function renderGraph(container, graphData, options) {
       //.text(d => d.label || d.id); // Fallback to ID if no label is provided
       .text(d => d.id);
 
-     /* Delay to ensure rendering is complete before calling getBBox()
-    setTimeout(() => {// Adjust the SVG size dynamically based on the rendered content
-     const groupNode = g.node();
+     // Delay to ensure rendering is complete before calling getBBox()
+    // Adjust the SVG size dynamically based on the rendered content  
+     setTimeout(() => {
+     /*const groupNode = g.node();
 
       if (!groupNode) {
         console.error('Graph transform group is not found.');
         return;
       }
-    
+    */
     const bbox = g.node().getBBox(); // Get the bounding box of the rendered graph
     
     if (!bbox || isNaN(bbox.width) || isNaN(bbox.height)) {
       console.error('Invalid bounding box:', bbox);
       return;
     }
-      console.log('Bounding Box:', bbox);
+    
+    // Debug bounding box dimensions
+    console.log('Bounding Box Dimensions:', bbox.width, bbox.height);
 
-    svg.attr('width', Math.max(bbox.width + dynamicPadding * 2, svgWidth)); // Adjust SVG width to fit the graph with padding
-    svg.attr('height', Math.max(bbox.height + dynamicPadding * 2, svgHeight)); // Adjust SVG height to fit the graph with padding
+
+  const adjustedWidth = Math.max(width, bbox.width + padding * 2);
+  const adjustedHeight = Math.max(height, bbox.height + padding * 2);
+    
+    svg.attr('width', adjustedWidth).attr('height', adjustedHeight);
+    
+    /*svg.attr('width', Math.max(graphWidth, width)); 
+    svg.attr('width', Math.max(graphHeight, height)); 
+    
     // Center the graph dynamically
-      centerGraph(svg, { width: svgWidth, height: svgHeight, padding: dynamicPadding, bbox });// Dynamically center the graph within the SVG
- 
-        svg.attr('width', bbox.width + padding * 2)
-           .attr('height', bbox.height + padding * 2);
-        
-           // Pass the correct bbox object to centerGraph
-        centerGraph(svg, { width, height, padding, bbox });
+      centerGraph(svg, { width: graphWidth, height: graphHeight, padding, bbox });// Dynamically center the graph within the SVG
+    
+  svg.attr('width', bbox.width + padding * 2)
+      .attr('height', bbox.height + padding * 2);
+    */
+  g.attr('transform', `translate(${padding+(width - bbox.width) / 2}, ${padding+(height - bbox.height) / 2})`);    
+  
+  /* Pass the correct bbox object to centerGraph
+        centerGraph(svg, { width, height, padding, bbox }); */
       }, 100); // Delay ensures the graph is fully rendered before centering
-*/
+
     // Add interactivity to nodes
     addNodeInteractivity(nodeGroup, linkGroup);
 

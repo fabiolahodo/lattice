@@ -90,7 +90,7 @@ function processSerializedFile(inputFilePath, outputBasePath) {
 }
 
 // Example usage
-const inputFilePath = path.join('input', 'serialized.json'); // Path to the input file
+const inputFilePath = path.join('input', 'bob-ros.json'); // Path to the input file
 const outputBasePath = 'data'; // Base path for the parsed output
 
 processSerializedFile(inputFilePath, outputBasePath);

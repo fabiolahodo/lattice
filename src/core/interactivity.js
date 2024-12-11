@@ -5,6 +5,7 @@ import { zoom } from 'd3-zoom';
 import { drag } from 'd3-drag';
 import * as d3 from 'd3';
 import { GRAPH_CONFIG } from './config.js';
+import { findShortestPath } from './lattice.js';
 
 /**
  * Adds interactivity to the graph, including zoom, pan, and drag behaviors to the graph.
@@ -60,9 +61,12 @@ export function addInteractivity(svg, simulation) {
  * Adds node-specific interactivity (hover, click) to the graph.
  * @param {Object} nodeGroup - The selection of nodes in the graph.
  * @param {Object} linkGroup - The selection of links in the graph.
- */
+ * @param {Object} graphData - The graph data containing nodes and links.
+*/
 
-export function addNodeInteractivity(nodeGroup, linkGroup) {
+export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
+  let selectedNodes = []; // Track selected nodes for shortest path
+
   nodeGroup
     .on('mouseover', function (event, d) {
       // Show tooltip on hover
@@ -70,7 +74,11 @@ export function addNodeInteractivity(nodeGroup, linkGroup) {
         .style('left', `${event.pageX + 10}px`) // Position tooltip near the mouse
         .style('top', `${event.pageY + 10}px`)
         .style('display', 'inline-block') // Make tooltip visible
-        .html(`ID: ${d.id}<br>Label: ${d.label}`); // Display node ID and label
+        .html(`
+          <strong>ID:</strong> ${d.id}<br>
+          <strong>Label:</strong> ${d.label}<br>
+          <strong>Level:</strong> ${d.level}
+          `); // Display node ID, label and level
     })
     .on('mouseout', () => {
       // Hide tooltip when mouse leaves the node
@@ -78,6 +86,47 @@ export function addNodeInteractivity(nodeGroup, linkGroup) {
     })
     .on('click', function (event, clickedNode) {
       // Handle node selection
+
+      // Track selected nodes for shortest path calculation
+      selectedNodes.push(clickedNode.id);
+
+    if (selectedNodes.length === 2) {
+      const [startNode, endNode] = selectedNodes;
+
+      // Calculate the shortest path
+      const path = findShortestPath(graphData, startNode, endNode);
+      console.log('Shortest Path:', path);
+
+      if (path.length > 0) {
+        // Highlight the shortest path
+        nodeGroup.attr('fill', (node) =>
+          path.includes(node.id) 
+            ? 'orange' 
+            : GRAPH_CONFIG.node.color
+        );
+
+        linkGroup.attr('stroke', (link) =>
+          path.includes(link.source.id) && path.includes(link.target.id)
+            ? 'orange'
+            : GRAPH_CONFIG.link.color
+        );
+
+        // Update the HTML to display the shortest path
+        d3.select('#shortest-path-display').html(`
+          Shortest path between <strong>${startNode}</strong> and <strong>${endNode}</strong>: 
+          ${path.join(' → ')}
+        `);
+
+      } else {
+        alert('No path found between the selected nodes.');
+        
+        // Clear the shortest path display
+        d3.select('#shortest-path-display').html('No path found between the selected nodes.');
+      }
+
+      // Reset selection
+      selectedNodes = [];
+    } else {
 
       // Find neighbors
       const superconcepts = [];
@@ -102,8 +151,8 @@ export function addNodeInteractivity(nodeGroup, linkGroup) {
      // Update the UI with the selected node's information
       d3.select('#selected-node-info').html(`
         <strong>Selected Node</strong><br>
-        &ensp; & &emsp;ID: ${clickedNode.id}<br>
-        &ensp; & &emsp;Label: ${clickedNode.label || 'No Label'}<br>
+        &ensp;  &emsp;ID: ${clickedNode.id}<br>
+        &ensp;  &emsp;Label: ${clickedNode.label || 'No Label'}<br>
         <strong>Superconcepts</strong>:${superconceptsInfo || 'None'}<br>
         <strong>Subconcepts:</strong> ${subconceptsInfo || 'None'}
         `);
@@ -138,6 +187,17 @@ export function addNodeInteractivity(nodeGroup, linkGroup) {
       ? GRAPH_CONFIG.node.selectedColor // Keep clicked node highlighted 
       : GRAPH_CONFIG.node.color // Default color for others
       );
-    });
+    }
+ });
+ // Add double-click to reset graph state
+nodeGroup.on('dblclick', () => {
+  // Reset all nodes and links
+  nodeGroup.attr('fill', GRAPH_CONFIG.node.color);
+  linkGroup
+    .attr('stroke', GRAPH_CONFIG.link.color)
+    .attr('stroke-width', GRAPH_CONFIG.link.thickness);
+
+  d3.select('#selected-node-info').html('Click a node to see its details.');
+});
 }
 

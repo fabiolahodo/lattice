@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return; // Stop execution if dataset path is missing
   }
 
-  /* Fetch graph data from the specified JSON file
+  // Fetch graph data from the specified JSON file
   fetch(datasetPath)
     .then(response => {
      // Check if the response is valid
@@ -24,7 +24,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     return response.json() // Parse JSON data
   })
-    .then(graphData => {
+  .then((data) => {
+    // Debug log for dataset content
+    console.log('Loaded dataset:', data);
+      createLattice(data, { container: '#graph-container' });
+    })
+    .catch((err) => console.error('Error loading graph data:', err));
+  });
+
+   /* .then(graphData => {
       const { width, height } = GRAPH_CONFIG.dimensions;
 
        // Create the concept lattice graph
@@ -51,12 +59,17 @@ document.addEventListener('DOMContentLoaded', () => {
         svg.setAttribute('height', bbox.height + padding * 2); // Adjust SVG height with padding
       }
     })
+  
       .catch(error => {
       console.error('Error loading graph data:', error);
-    });*/
-
+    });
+  })*/
+/*
     fetch(datasetPath)
         .then((res) => res.json())
-        .then((data) => createLattice(data, { container: '#graph-container', ...GRAPH_CONFIG.dimensions }))
-        .catch((err) => console.error('Error loading data:', err));
-});
+        //.then((data) => createLattice(data, { container: '#graph-container', ...GRAPH_CONFIG.dimensions }))
+        .then((graphData) => {
+          createLattice(graphData, { container: '#graph-container', ...GRAPH_CONFIG.dimensions });
+      })
+      .catch((err) => console.error('Error loading data:', err));
+});*/
