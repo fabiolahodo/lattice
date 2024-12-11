@@ -1,0 +1,32 @@
+{
+    "nodes": [
+        { "id": "Top Concept", "label": "Extent\n{girl, woman, boy, man}\nIntent{}", "level": 1 },
+        { "id": "1", "label": "Extent\n{girl, woman}\nIntent{female}", "level": 2 },
+        { "id": "2", "label": "Extent\n{boy, man}\nIntent{male}", "level": 2 },
+        { "id": "3", "label": "Extent\n{girl, boy}\nIntent{juvenile}", "level": 2 },
+        { "id": "4", "label": "Extent\n{woman, man}\nIntent{adult}", "level": 2 },
+        { "id": "5", "label": "Extent\n{girl}\nIntent{female, juvenile}", "level": 3 },
+        { "id": "6", "label": "Extent\n{woman}\nIntent{female, adult}", "level": 3 },
+        { "id": "7", "label": "Extent\n{boy}\nIntent{male, juvenile}", "level": 3 },
+        { "id": "8", "label": "Extent\n{man}\nIntent{male, adult}", "level": 3 },
+        { "id": "Bottom Concept", "label": "Extent\n{}\nIntent{female, juvenile, adult, male}", "level": 4 }
+    ],
+    "links": [
+        { "source": "Top Concept", "target": "1" },
+        { "source": "Top Concept", "target": "2" },
+        { "source": "Top Concept", "target": "3" },
+        { "source": "Top Concept", "target": "4" },
+        { "source": "1", "target": "5" },
+        { "source": "1", "target": "6" },
+        { "source": "2", "target": "7" },
+        { "source": "2", "target": "8" },
+        { "source": "3", "target": "5" },
+        { "source": "3", "target": "7" },
+        { "source": "4", "target": "6" },
+        { "source": "4", "target": "8" },
+        { "source": "5", "target": "Bottom Concept" },
+        { "source": "6", "target": "Bottom Concept" },
+        { "source": "7", "target": "Bottom Concept" },
+        { "source": "8", "target": "Bottom Concept" }
+    ]
+}

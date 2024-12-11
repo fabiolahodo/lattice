@@ -4442,7 +4442,8 @@ const GRAPH_CONFIG = {
       padding: 50, // Padding around the graph
     },
     node: {
-      defaultRadius: 10, // Default radius for nodes
+      maxRadius: 10, // Max radius for small graphs
+      minRadius: 5, // Smaller minimum radius for very large graphs
       color: 'blue', // Default node color
       selectedColor: 'red', // Color for selected nodes
       labelOffset: 15, // Distance of labels from nodes
@@ -4451,20 +4452,31 @@ const GRAPH_CONFIG = {
       color: '#ccc', // Default color for links
       thickness: 2, // Default thickness of links
       highlightedColor: 'red', // Color for highlighted links
-      minDistance: 30, // Minimum link distance
-      minThickness: 2, // Minimum link thickness
+      minDistance: 50, // Minimum link distance
+      maxDistance: 200, // Maximum link distance for large graphs
+      minThickness: 1, // Minimum thickness of links for better performance 
     },
     constraints: {
       topY: 50, // Minimum y-position for the top concept
       bottomY: 50, // Maximum y-position for the bottom concept
     },
     zoom: {
-      scaleExtent: [0.1, 10], // Zoom range: 10% to 1000%
+      scaleExtent: [0.1, 2], // Zoom range: 10% to 200% (adjust for large graphs)
     },
     simulation: {
-        collisionFactor: 0.8, // Multiplier for collision radius
-        chargeFactor: 5, // Multiplier for charge/repulsion strength
-      },
+      collisionFactor: 1.2, // Multiplier for collision radius
+      chargeFactor: 5, // Multiplier for charge/repulsion strength
+      throttling: true, // Enable throttling for simulation updates
+      tickInterval: 30, // Minimum interval (ms) between simulation ticks for large graphs
+    },
+    performance: {
+      maxNodes: 5000, // Suggest max nodes for optimal performance
+      debounceInterval: 100, // Debounce interval for resize or drag events
+    },
+    features: {
+      enableClustering: false, // Placeholder for future clustering feature
+      theme: 'light', // Placeholder for theming (e.g., dark, light)
+    },
   };
 
 //src/core/interactivity.js
@@ -4523,9 +4535,12 @@ function addInteractivity(svg, simulation) {
  * Adds node-specific interactivity (hover, click) to the graph.
  * @param {Object} nodeGroup - The selection of nodes in the graph.
  * @param {Object} linkGroup - The selection of links in the graph.
- */
+ * @param {Object} graphData - The graph data containing nodes and links.
+*/
 
-function addNodeInteractivity(nodeGroup, linkGroup) {
+function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
+  let selectedNodes = []; // Track selected nodes for shortest path
+
   nodeGroup
     .on('mouseover', function (event, d) {
       // Show tooltip on hover
@@ -4533,7 +4548,11 @@ function addNodeInteractivity(nodeGroup, linkGroup) {
         .style('left', `${event.pageX + 10}px`) // Position tooltip near the mouse
         .style('top', `${event.pageY + 10}px`)
         .style('display', 'inline-block') // Make tooltip visible
-        .html(`ID: ${d.id}<br>Label: ${d.label}`); // Display node ID and label
+        .html(`
+          <strong>ID:</strong> ${d.id}<br>
+          <strong>Label:</strong> ${d.label}<br>
+          <strong>Level:</strong> ${d.level}
+          `); // Display node ID, label and level
     })
     .on('mouseout', () => {
       // Hide tooltip when mouse leaves the node
@@ -4541,6 +4560,47 @@ function addNodeInteractivity(nodeGroup, linkGroup) {
     })
     .on('click', function (event, clickedNode) {
       // Handle node selection
+
+      // Track selected nodes for shortest path calculation
+      selectedNodes.push(clickedNode.id);
+
+    if (selectedNodes.length === 2) {
+      const [startNode, endNode] = selectedNodes;
+
+      // Calculate the shortest path
+      const path = findShortestPath(graphData, startNode, endNode);
+      console.log('Shortest Path:', path);
+
+      if (path.length > 0) {
+        // Highlight the shortest path
+        nodeGroup.attr('fill', (node) =>
+          path.includes(node.id) 
+            ? 'orange' 
+            : GRAPH_CONFIG.node.color
+        );
+
+        linkGroup.attr('stroke', (link) =>
+          path.includes(link.source.id) && path.includes(link.target.id)
+            ? 'orange'
+            : GRAPH_CONFIG.link.color
+        );
+
+        // Update the HTML to display the shortest path
+        select('#shortest-path-display').html(`
+          Shortest path between <strong>${startNode}</strong> and <strong>${endNode}</strong>: 
+          ${path.join(' → ')}
+        `);
+
+      } else {
+        alert('No path found between the selected nodes.');
+        
+        // Clear the shortest path display
+        select('#shortest-path-display').html('No path found between the selected nodes.');
+      }
+
+      // Reset selection
+      selectedNodes = [];
+    } else {
 
       // Find neighbors
       const superconcepts = [];
@@ -4565,8 +4625,8 @@ function addNodeInteractivity(nodeGroup, linkGroup) {
      // Update the UI with the selected node's information
       select('#selected-node-info').html(`
         <strong>Selected Node</strong><br>
-        &ensp; & &emsp;ID: ${clickedNode.id}<br>
-        &ensp; & &emsp;Label: ${clickedNode.label || 'No Label'}<br>
+        &ensp;  &emsp;ID: ${clickedNode.id}<br>
+        &ensp;  &emsp;Label: ${clickedNode.label || 'No Label'}<br>
         <strong>Superconcepts</strong>:${superconceptsInfo || 'None'}<br>
         <strong>Subconcepts:</strong> ${subconceptsInfo || 'None'}
         `);
@@ -4601,7 +4661,18 @@ function addNodeInteractivity(nodeGroup, linkGroup) {
       ? GRAPH_CONFIG.node.selectedColor // Keep clicked node highlighted 
       : GRAPH_CONFIG.node.color // Default color for others
       );
-    });
+    }
+ });
+ // Add double-click to reset graph state
+nodeGroup.on('dblclick', () => {
+  // Reset all nodes and links
+  nodeGroup.attr('fill', GRAPH_CONFIG.node.color);
+  linkGroup
+    .attr('stroke', GRAPH_CONFIG.link.color)
+    .attr('stroke-width', GRAPH_CONFIG.link.thickness);
+
+  select('#selected-node-info').html('Click a node to see its details.');
+});
 }
 
 //src/core/rendering.js 
@@ -4641,6 +4712,16 @@ function renderGraph(container, graphData, options) {
   // Dynamically calculate padding based on the size of the graph (number of nodes)
   const dynamicPadding = Math.max(padding, Math.sqrt(graphData.nodes.length || 1) * 10); // Scale padding to fit graph dynamically
 */
+
+// Calculate dynamic node radius based on graph size
+const dynamicRadius = Math.max(
+  GRAPH_CONFIG.node.minRadius,
+  Math.min(
+    GRAPH_CONFIG.node.maxRadius,
+    50 / Math.sqrt(graphData.nodes.length || 1) // Scale inversely with node count
+  )
+);
+
   // Create SVG element in the specified container
   const svg = select(container)
     .append('svg') // Append an SVG element to the container
@@ -4668,8 +4749,9 @@ function renderGraph(container, graphData, options) {
     .enter() // Process each node in the data
     .append('circle') // Append a <circle> element for each node
     .attr('class', 'node') // Add a class for styling
-    .attr('r', GRAPH_CONFIG.node.defaultRadius) // Radius of the node
+    //.attr('r', GRAPH_CONFIG.node.defaultRadius) // Radius of the node
     //.attr('r', d =>Math.max(5, 100 / Math.sqrt(graphData.nodes.length))) // Dynamic radius
+    .attr('r', dynamicRadius) // Use dynamic radius
     .attr('fill',  GRAPH_CONFIG.node.color); // Default node color
       
     // Adjust label position dynamically based on node's position
@@ -4684,35 +4766,47 @@ function renderGraph(container, graphData, options) {
       //.text(d => d.label || d.id); // Fallback to ID if no label is provided
       .text(d => d.id);
 
-     /* Delay to ensure rendering is complete before calling getBBox()
-    setTimeout(() => {// Adjust the SVG size dynamically based on the rendered content
-     const groupNode = g.node();
+     // Delay to ensure rendering is complete before calling getBBox()
+    // Adjust the SVG size dynamically based on the rendered content  
+     setTimeout(() => {
+     /*const groupNode = g.node();
 
       if (!groupNode) {
         console.error('Graph transform group is not found.');
         return;
       }
-    
+    */
     const bbox = g.node().getBBox(); // Get the bounding box of the rendered graph
     
     if (!bbox || isNaN(bbox.width) || isNaN(bbox.height)) {
       console.error('Invalid bounding box:', bbox);
       return;
     }
-      console.log('Bounding Box:', bbox);
+    
+    // Debug bounding box dimensions
+    console.log('Bounding Box Dimensions:', bbox.width, bbox.height);
 
-    svg.attr('width', Math.max(bbox.width + dynamicPadding * 2, svgWidth)); // Adjust SVG width to fit the graph with padding
-    svg.attr('height', Math.max(bbox.height + dynamicPadding * 2, svgHeight)); // Adjust SVG height to fit the graph with padding
+
+  const adjustedWidth = Math.max(width, bbox.width + padding * 2);
+  const adjustedHeight = Math.max(height, bbox.height + padding * 2);
+    
+    svg.attr('width', adjustedWidth).attr('height', adjustedHeight);
+    
+    /*svg.attr('width', Math.max(graphWidth, width)); 
+    svg.attr('width', Math.max(graphHeight, height)); 
+    
     // Center the graph dynamically
-      centerGraph(svg, { width: svgWidth, height: svgHeight, padding: dynamicPadding, bbox });// Dynamically center the graph within the SVG
- 
-        svg.attr('width', bbox.width + padding * 2)
-           .attr('height', bbox.height + padding * 2);
-        
-           // Pass the correct bbox object to centerGraph
-        centerGraph(svg, { width, height, padding, bbox });
+      centerGraph(svg, { width: graphWidth, height: graphHeight, padding, bbox });// Dynamically center the graph within the SVG
+    
+  svg.attr('width', bbox.width + padding * 2)
+      .attr('height', bbox.height + padding * 2);
+    */
+  g.attr('transform', `translate(${padding+(width - bbox.width) / 2}, ${padding+(height - bbox.height) / 2})`);    
+  
+  /* Pass the correct bbox object to centerGraph
+        centerGraph(svg, { width, height, padding, bbox }); */
       }, 100); // Delay ensures the graph is fully rendered before centering
-*/
+
     // Add interactivity to nodes
     addNodeInteractivity(nodeGroup, linkGroup);
 
@@ -4883,6 +4977,11 @@ function applyNodeConstraints(graphData, width, height) {
     node.x = Math.max(0, Math.min(width, node.x));
     node.y = Math.max(0, Math.min(height, node.y));
   });
+ // Ensure all nodes stay within the SVG bounds (added after constraints logic)
+ graphData.nodes.forEach((node) => {
+  node.x = Math.max(padding, Math.min(width - padding, node.x));
+  node.y = Math.max(padding, Math.min(height - padding, node.y));
+}); 
 }
 
 // src/core/simulation.js
@@ -4910,7 +5009,6 @@ function createSimulation(graphData, linkGroup, nodeGroup, labelGroup, options) 
         node.x = node.x || width / 2;
         node.y = node.y || height / 2;
     });
-
   /* Dynamically calculate max link distance based on dataset size and canvas dimensions
   const baseDistance = Math.min(width, height) / 5; // A baseline distance proportional to the canvas size
   const dynamicDistance = (baseDistance / Math.sqrt(graphData.nodes.length)) * 2; // Adjust based on node count
@@ -4921,11 +5019,15 @@ function createSimulation(graphData, linkGroup, nodeGroup, labelGroup, options) 
   };
 */
 
-// Dynamically adjust force parameters
+//Dynamically adjust force parameters
 const baseDistance = Math.min(width, height) / 5; // Base distance relative to canvas size
-const dynamicDistance = Math.max(GRAPH_CONFIG.link.minDistance, baseDistance / Math.sqrt(graphData.nodes.length)); // Link distance scales with node count
-const collisionRadius = dynamicDistance * GRAPH_CONFIG.simulation.collisionFactor; // Collision radius relative to link distance
-const chargeStrength = -dynamicDistance * GRAPH_CONFIG.simulation.chargeFactor; // Dynamic charge/repulsion strength
+const dynamicLinkDistance = Math.max(
+  GRAPH_CONFIG.link.minDistance, 
+  baseDistance / Math.sqrt(graphData.nodes.length)); // Link distance scales with node count
+//const collisionRadius = dynamicLinkDistance * GRAPH_CONFIG.simulation.collisionFactor; // Collision radius relative to link distance
+//const chargeStrength = -dynamicLinkDistance * GRAPH_CONFIG.simulation.chargeFactor; // Dynamic charge/repulsion strength
+const collisionRadius = Math.max(30, dynamicLinkDistance * GRAPH_CONFIG.simulation.collisionFactor); // Increased collision radius
+const chargeStrength = Math.min(-100, -dynamicLinkDistance * GRAPH_CONFIG.simulation.chargeFactor); // Stronger repulsion for larger graphs
 
   const simulation$1 = simulation(graphData.nodes)
     /*.force('link', d3.forceLink(graphData.links).id(d => d.id).distance(150))
@@ -4934,14 +5036,11 @@ const chargeStrength = -dynamicDistance * GRAPH_CONFIG.simulation.chargeFactor; 
     //.force('center', d3.forceCenter(0, 0)) // Center at (0, 0)
     .force('center', d3.forceCenter(width / 2, height / 2)) // Center the graph
     */
-    .force('link', link(graphData.links).id(d => d.id).distance(dynamicDistance)) // Dynamic link distance
+    .force('link', link(graphData.links).id(d => d.id).distance(dynamicLinkDistance)) // Dynamic link distance
     .force('charge', manyBody().strength(chargeStrength)) // Adjust repulsion dynamically
     .force('collision', collide().radius(collisionRadius)) // Dynamic collision radius
     .force('center', center(width / 2, height / 2)) // Center graph
     .on('tick', () => {
-      // Apply node constraints
-      applyNodeConstraints(graphData, width, height);
-      
       // Update positions dynamically on every tick
        // Update link positions
       linkGroup
@@ -4962,12 +5061,98 @@ const chargeStrength = -dynamicDistance * GRAPH_CONFIG.simulation.chargeFactor; 
       labelGroup
         .attr('x', d => d.x)
         .attr('y', d => d.y + GRAPH_CONFIG.node.labelOffset); // Adjust below the node
-    }); 
+    
+      // Apply node constraints
+      applyNodeConstraints(graphData, width, height);
+
+      // Debug: Log positions of first few nodes and links
+  if (graphData.nodes.length > 0) {
+    console.log('Node positions:', graphData.nodes.slice(0, 5).map(n => ({ id: n.id, x: n.x, y: n.y })));
+  }
+  if (graphData.links.length > 0) {
+    console.log('Link positions:', graphData.links.slice(0, 5).map(l => ({ source: l.source.id, target: l.target.id })));
+  }
+      
+}); 
   
     return simulation$1;
   }
 
+// src/core/metrics.js
+
+/**
+ * Calculates metrics for the concept lattice.
+ * @param {Object} graphData - The graph data containing nodes and links.
+ * @param {Object} formalContext - The formal context containing objects and attributes.
+ * @returns {Object} - The calculated metrics (number of concepts, objects, attributes).
+ */
+// Exporting a function to calculate metrics (concepts, objects, attributes).
+function calculateMetrics(graphData) {
+
+     // Check if the graph data is valid (should include nodes and links).
+    if (!graphData || !graphData.nodes || !graphData.links) {
+      throw new Error('Invalid input: Ensure graphData includes nodes and links.');
+    }
+  
+    // Number of concepts is the number of nodes in the graph
+    const totalConcepts = graphData.nodes.length;
+  
+    // Calculate the total number of unique objects across all nodes.
+  // Each node's label contains an "Extent" block that specifies the objects it represents.
+  // Extract and count unique objects
+  const totalObjects = new Set(
+    graphData.nodes.flatMap((node) => {
+      // Extract the "Extent" part from the node's label using a regular expression.
+      const match = node.label.match(/Extent\s*\{([^}]*)\}/);
+      // If a match is found, split the contents of the "Extent" by commas and trim whitespace.
+      return match 
+      ? match[1]
+        .split(',')
+        .map((item) => item.trim()) 
+        .filter((item) => item !== '') // Exclude empty strings
+      : [];
+    })
+  ).size; // Use a Set to ensure unique objects are counted.
+
+  // Calculate the total number of unique attributes across all nodes.
+  // Each node's label contains an "Intent" block that specifies the attributes it represents.
+  // Extract and count unique attributes
+  const totalAttributes = new Set(
+    graphData.nodes.flatMap((node) => {
+      // Extract the "Intent" part from the node's label using a regular expression.
+      const match = node.label.match(/Intent\s*\{([^}]*)\}/);
+      // If a match is found, split the contents of the "Intent" by commas and trim whitespace.
+      return match 
+      ? match[1]
+        .split(',')
+        .map((item) => item.trim()) 
+        .filter((item) => item !== '') // Exclude empty strings
+      : [];
+    })
+  ).size; // Use a Set to ensure unique attributes are counted.
+
+  // Return an object containing the calculated metrics.
+    return {
+      totalConcepts,
+      totalObjects,
+      totalAttributes,
+    };
+  }
+
 //src/core/lattice.js
+
+
+/**
+ * Updates the metrics in the DOM.
+ * @param {Object} metrics - The metrics to display.
+ */
+// Function to update metrics in the DOM
+function updateMetricsInDOM(metrics) {
+  document.getElementById('total-concepts').textContent = metrics.totalConcepts;
+  document.getElementById('total-objects').textContent = metrics.totalObjects;
+  document.getElementById('total-attributes').textContent = metrics.totalAttributes;
+}
+
 
 /**
  * Creates a concept lattice based on the provided graph data.
@@ -4975,7 +5160,6 @@ const chargeStrength = -dynamicDistance * GRAPH_CONFIG.simulation.chargeFactor; 
  * @param {Object} options - Configuration options for the graph.
  * @returns {Object} - The SVG and simulation instances for further use.
  */
-
 function createLattice(graphData, options = {}) {
   //const { container = 'body', width = 800, height = 600 } = options;
   
@@ -4989,7 +5173,13 @@ function createLattice(graphData, options = {}) {
    if (!graphData || !graphData.nodes || !graphData.links) {
     throw new Error('Invalid graphData. Ensure it includes nodes and links.');
   }
+  // Calculate metrics and log them
+  const metrics = calculateMetrics(graphData);
+  console.log('Metrics:', metrics);
 
+  // Update metrics in the DOM
+  updateMetricsInDOM(metrics);
+  
   // Render the graph using dynamic dimensions and get the SVG elements
   const { svg, linkGroup, nodeGroup, labelGroup } = renderGraph(container, graphData, { width, height });
   //const g = svg.select('.graph-transform'); // Select the `g` group
@@ -5010,6 +5200,9 @@ function createLattice(graphData, options = {}) {
   // Add interactivity after creating the simulation
   addInteractivity(svg, simulation);
 
+  // Add node-specific interactivity (hover, click, shortest path, etc.)
+  addNodeInteractivity(nodeGroup, linkGroup, graphData);
+
    /*Center graph dynamically after initial rendering
    centerGraph(svg,{width, height});
   */
@@ -5020,8 +5213,49 @@ function createLattice(graphData, options = {}) {
   centerGraph(svg, { width, height, padding: GRAPH_CONFIG.dimensions.padding, bbox });
  }, 100);
 
-  // Return the SVG and simulation for further use
-  return { svg, simulation };
+  // Return the SVG, simulation and metrics for further use
+  return { svg, simulation, metrics };
+}
+
+/**
+ * Finds the shortest path between two nodes using Breadth-First Search (BFS).
+ * @param {Object} graphData - The graph data containing nodes and links.
+ * @param {string} startNodeId - ID of the starting node.
+ * @param {string} endNodeId - ID of the ending node.
+ * @returns {Array} - The shortest path as an array of node IDs, or an empty array if no path exists.
+ */
+function findShortestPath(graphData, startNodeId, endNodeId) {
+  const adjacencyList = new Map();
+
+  // Build adjacency list
+  graphData.links.forEach((link) => {
+    if (!adjacencyList.has(link.source.id)) adjacencyList.set(link.source.id, []);
+    if (!adjacencyList.has(link.target.id)) adjacencyList.set(link.target.id, []);
+    adjacencyList.get(link.source.id).push(link.target.id);
+    adjacencyList.get(link.target.id).push(link.source.id);
+  });
+
+  // BFS setup
+  const visited = new Set();
+  const queue = [[startNodeId]];
+
+  while (queue.length > 0) {
+    const path = queue.shift();
+    const currentNode = path[path.length - 1];
+
+    if (currentNode === endNodeId) return path;
+
+    if (!visited.has(currentNode)) {
+      visited.add(currentNode);
+
+      const neighbors = adjacencyList.get(currentNode) || [];
+      neighbors.forEach((neighbor) => {
+        if (!visited.has(neighbor)) queue.push([...path, neighbor]);
+      });
+    }
+  }
+
+  return [];
 }
 
 // src/index.js 
@@ -5037,7 +5271,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return; // Stop execution if dataset path is missing
   }
 
-  /* Fetch graph data from the specified JSON file
+  // Fetch graph data from the specified JSON file
   fetch(datasetPath)
     .then(response => {
      // Check if the response is valid
@@ -5046,7 +5280,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     return response.json() // Parse JSON data
   })
-    .then(graphData => {
+  .then((data) => {
+    // Debug log for dataset content
+    console.log('Loaded dataset:', data);
+      createLattice(data, { container: '#graph-container' });
+    })
+    .catch((err) => console.error('Error loading graph data:', err));
+  });
+
+   /* .then(graphData => {
       const { width, height } = GRAPH_CONFIG.dimensions;
 
        // Create the concept lattice graph
@@ -5073,12 +5315,17 @@ document.addEventListener('DOMContentLoaded', () => {
         svg.setAttribute('height', bbox.height + padding * 2); // Adjust SVG height with padding
       }
     })
+  
       .catch(error => {
       console.error('Error loading graph data:', error);
-    });*/
-
+    });
+  })*/
+/*
     fetch(datasetPath)
         .then((res) => res.json())
-        .then((data) => createLattice(data, { container: '#graph-container', ...GRAPH_CONFIG.dimensions }))
-        .catch((err) => console.error('Error loading data:', err));
-});
+        //.then((data) => createLattice(data, { container: '#graph-container', ...GRAPH_CONFIG.dimensions }))
+        .then((graphData) => {
+          createLattice(graphData, { container: '#graph-container', ...GRAPH_CONFIG.dimensions });
+      })
+      .catch((err) => console.error('Error loading data:', err));
+});*/

@@ -1,0 +1,221 @@
+{
+    "nodes": [
+        {
+            "id": "Top Concept",
+            "label": "Extent\n{fish leech, bream, frog, dog, water weeds, reed, bean, corn}\nIntent{}",
+            "level": 1
+        },
+        {
+            "id": "1",
+            "label": "Extent\n{fish leech, bream, water weeds}\nIntent{lives in water}",
+            "level": 2
+        },
+        {
+            "id": "2",
+            "label": "Extent\n{reed, bean, corn}\nIntent{needs chlorophyll}",
+            "level": 2
+        },
+        {
+            "id": "3",
+            "label": "Extent\n{frog, dog}\nIntent{has limbs}",
+            "level": 2
+        },
+        {
+            "id": "4",
+            "label": "Extent\n{water weeds, reed}\nIntent{monocotyledon}",
+            "level": 2
+        },
+        {
+            "id": "5",
+            "label": "Extent\n{fish leech}\nIntent{lives in water, can move}",
+            "level": 3
+        },
+        {
+            "id": "6",
+            "label": "Extent\n{bream}\nIntent{lives in water, can move}",
+            "level": 3
+        },
+        {
+            "id": "7",
+            "label": "Extent\n{frog}\nIntent{has limbs, lives on land, can move}",
+            "level": 3
+        },
+        {
+            "id": "8",
+            "label": "Extent\n{dog}\nIntent{has limbs, lives on land, breast feeds, can move}",
+            "level": 3
+        },
+        {
+            "id": "9",
+            "label": "Extent\n{water weeds}\nIntent{lives in water, needs chlorophyll, monocotyledon}",
+            "level": 3
+        },
+        {
+            "id": "10",
+            "label": "Extent\n{reed}\nIntent{needs chlorophyll, monocotyledon}",
+            "level": 3
+        },
+        {
+            "id": "11",
+            "label": "Extent\n{bean}\nIntent{needs chlorophyll, dicotyledon}",
+            "level": 3
+        },
+        {
+            "id": "12",
+            "label": "Extent\n{corn}\nIntent{needs chlorophyll, monocotyledon}",
+            "level": 3
+        },
+        {
+            "id": "13",
+            "label": "Extent\n{fish leech, bream}\nIntent{lives in water, can move}",
+            "level": 3
+        },
+        {
+            "id": "14",
+            "label": "Extent\n{frog, dog}\nIntent{has limbs, lives on land, can move}",
+            "level": 3
+        },
+        {
+            "id": "15",
+            "label": "Extent\n{reed, corn}\nIntent{monocotyledon, needs chlorophyll}",
+            "level": 3
+        },
+        {
+            "id": "16",
+            "label": "Extent\n{fish leech, water weeds}\nIntent{lives in water, can move}",
+            "level": 3
+        },
+        {
+            "id": "17",
+            "label": "Extent\n{bream, water weeds}\nIntent{lives in water}",
+            "level": 3
+        },
+        {
+            "id": "Bottom Concept",
+            "label": "Extent\n{}\nIntent{needs water to live, lives in water, lives on land, needs chlorophyll, dicotyledon, monocotyledon, can move, has limbs, breast feeds}",
+            "level": 4
+        }
+    ],
+    "links": [
+        {
+            "source": "Top Concept",
+            "target": "1"
+        },
+        {
+            "source": "Top Concept",
+            "target": "2"
+        },
+        {
+            "source": "Top Concept",
+            "target": "3"
+        },
+        {
+            "source": "Top Concept",
+            "target": "4"
+        },
+        {
+            "source": "1",
+            "target": "5"
+        },
+        {
+            "source": "1",
+            "target": "6"
+        },
+        {
+            "source": "1",
+            "target": "17"
+        },
+        {
+            "source": "2",
+            "target": "10"
+        },
+        {
+            "source": "2",
+            "target": "11"
+        },
+        {
+            "source": "2",
+            "target": "12"
+        },
+        {
+            "source": "2",
+            "target": "15"
+        },
+        {
+            "source": "3",
+            "target": "7"
+        },
+        {
+            "source": "3",
+            "target": "8"
+        },
+        {
+            "source": "4",
+            "target": "9"
+        },
+        {
+            "source": "4",
+            "target": "10"
+        },
+        {
+            "source": "5",
+            "target": "13"
+        },
+        {
+            "source": "5",
+            "target": "16"
+        },
+        {
+            "source": "6",
+            "target": "13"
+        },
+        {
+            "source": "7",
+            "target": "14"
+        },
+        {
+            "source": "8",
+            "target": "14"
+        },
+        {
+            "source": "9",
+            "target": "16"
+        },
+        {
+            "source": "9",
+            "target": "17"
+        },
+        {
+            "source": "10",
+            "target": "15"
+        },
+        {
+            "source": "11",
+            "target": "Bottom Concept"
+        },
+        {
+            "source": "12",
+            "target": "Bottom Concept"
+        },
+        {
+            "source": "13",
+            "target": "Bottom Concept"
+        },
+        {
+            "source": "14",
+            "target": "Bottom Concept"
+        },
+        {
+            "source": "15",
+            "target": "Bottom Concept"
+        },
+        {
+            "source": "16",
+            "target": "Bottom Concept"
+        },
+        {
+            "source": "17",
+            "target": "Bottom Concept"
+        }
+    ]
+}
