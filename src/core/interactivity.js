@@ -8,6 +8,44 @@ import { GRAPH_CONFIG } from './config.js';
 import { findShortestPath } from './lattice.js';
 
 /**
+ * Computes and assigns superconcepts and subconcepts based on graph links.
+ * @param {Object} graphData - The graph data containing nodes and links.
+ */
+export function computeSuperSubConcepts(graphData) {
+  
+  if (!graphData || !Array.isArray(graphData.nodes) || !Array.isArray(graphData.links)) {
+    console.error("❌ computeSuperSubConcepts received invalid graphData:", graphData);
+    return;
+}
+console.log("✅ computeSuperSubConcepts received:", graphData.nodes.length, "nodes and", graphData.links.length, "links");
+  // Ensure each node has superconcepts and subconcepts properties
+    graphData.nodes.forEach(node => {
+      if (!Array.isArray(node.superconcepts)) node.superconcepts = [];
+      if (!Array.isArray(node.subconcepts)) node.subconcepts = [];
+    });
+
+    // Traverse links to assign superconcepts and subconcepts
+    graphData.links.forEach(link => {
+        let sourceNode = graphData.nodes.find(n => n.id == link.source );
+        let targetNode = graphData.nodes.find(n => n.id == link.target );
+
+        if (!sourceNode || !targetNode) {
+          console.warn(`⚠️ Link references invalid nodes:`, link);
+          return;
+      }
+      sourceNode.subconcepts.push(targetNode); // Outgoing = Subconcept
+      targetNode.superconcepts.push(sourceNode); // Incoming = Superconcept
+        
+    });
+
+    //Debugging: Log relationships
+    graphData.nodes.forEach(node => {
+        console.log(`🔗 Node ${node.id} Superconcepts:`, node.superconcepts.map(n => n.id));
+        console.log(`🔗 Node ${node.id} Subconcepts:`, node.subconcepts.map(n => n.id));
+    });
+}
+
+/**
  * Adds interactivity to the graph, including zoom, pan, and drag behaviors to the graph.
  * @param {Object} svg - The SVG element containing the graph.
  * @param {Object} simulation - The D3 force simulation instance.
@@ -76,8 +114,8 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
         .style('display', 'inline-block') // Make tooltip visible
         .html(`
           <strong>ID:</strong> ${d.id}<br>
-          <strong>Label:</strong> ${d.label}<br>
-          <strong>Level:</strong> ${d.level}
+          <strong>Label:</strong> ${d.label|| 'No Label'}<br>
+          <strong>Level:</strong> ${d.level || 'N/A'}
           `); // Display node ID, label and level
     })
     .on('mouseout', () => {
@@ -86,6 +124,8 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
     })
     .on('click', function (event, clickedNode) {
       // Handle node selection
+
+      console.log(`📌 Node Clicked: ${clickedNode.id}`);
 
       // Track selected nodes for shortest path calculation
       selectedNodes.push(clickedNode.id);
@@ -128,10 +168,10 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
       selectedNodes = [];
     } else {
 
-      // Find neighbors
+      /* Find neighbors
       const superconcepts = [];
       const subconcepts = [];
-
+      
       linkGroup.each(function (link) {
         if (link.source.id === clickedNode.id) {
             subconcepts.push(link.target); // Outgoing link -> Subconcept
@@ -139,6 +179,21 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
             superconcepts.push(link.source); // Incoming link -> Superconcept
         }
     });
+      */
+
+    // Ensure relationships exist before accessing them
+    if (!clickedNode.superconcepts || !clickedNode.subconcepts) {
+      console.warn(`⚠️ Node ${clickedNode.id} missing superconcepts or subconcepts.`);
+      return;
+  }
+
+    // Use precomputed values instead of recalculating
+    const superconcepts = clickedNode.superconcepts;
+    const subconcepts = clickedNode.subconcepts;
+    
+    console.log(`🔗 Node ${clickedNode.id} Superconcepts:`, superconcepts.map(n => n.id));
+    console.log(`🔗 Node ${clickedNode.id} Subconcepts:`, subconcepts.map(n => n.id));
+
 
     // Format neighbor information
     const superconceptsInfo = superconcepts
@@ -153,6 +208,8 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
         <strong>Selected Node</strong><br>
         &ensp;  &emsp;ID: ${clickedNode.id}<br>
         &ensp;  &emsp;Label: ${clickedNode.label || 'No Label'}<br>
+        <strong>Extent Size:</strong> ${clickedNode.metrics.extentSize}&ensp;  &emsp;<strong>Intent Size:</strong> ${clickedNode.metrics.intentSize}<br>
+        <strong>Stability:</strong> ${clickedNode.metrics.stability}&ensp;  &emsp;<strong>Neighborhood Size:</strong> ${clickedNode.metrics.neighborhoodSize}<br>
         <strong>Superconcepts</strong>:${superconceptsInfo || 'None'}<br>
         <strong>Subconcepts:</strong> ${subconceptsInfo || 'None'}
         `);
