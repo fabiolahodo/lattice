@@ -71,4 +71,9 @@ export function applyNodeConstraints(graphData, width, height) {
     node.x = Math.max(0, Math.min(width, node.x));
     node.y = Math.max(0, Math.min(height, node.y));
   });
+ // Ensure all nodes stay within the SVG bounds (added after constraints logic)
+ graphData.nodes.forEach((node) => {
+  node.x = Math.max(padding, Math.min(width - padding, node.x));
+  node.y = Math.max(padding, Math.min(height - padding, node.y));
+}); 
 }
