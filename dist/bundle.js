@@ -1,3 +1,86 @@
+var noop = {value: () => {}};
+
+function dispatch() {
+  for (var i = 0, n = arguments.length, _ = {}, t; i < n; ++i) {
+    if (!(t = arguments[i] + "") || (t in _) || /[\s.]/.test(t)) throw new Error("illegal type: " + t);
+    _[t] = [];
+  }
+  return new Dispatch(_);
+}
+
+function Dispatch(_) {
+  this._ = _;
+}
+
+function parseTypenames$1(typenames, types) {
+  return typenames.trim().split(/^|\s+/).map(function(t) {
+    var name = "", i = t.indexOf(".");
+    if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
+    if (t && !types.hasOwnProperty(t)) throw new Error("unknown type: " + t);
+    return {type: t, name: name};
+  });
+}
+
+Dispatch.prototype = dispatch.prototype = {
+  constructor: Dispatch,
+  on: function(typename, callback) {
+    var _ = this._,
+        T = parseTypenames$1(typename + "", _),
+        t,
+        i = -1,
+        n = T.length;
+
+    // If no callback was specified, return the callback of the given type and name.
+    if (arguments.length < 2) {
+      while (++i < n) if ((t = (typename = T[i]).type) && (t = get$1(_[t], typename.name))) return t;
+      return;
+    }
+
+    // If a type was specified, set the callback for the given type and name.
+    // Otherwise, if a null callback was specified, remove callbacks of the given name.
+    if (callback != null && typeof callback !== "function") throw new Error("invalid callback: " + callback);
+    while (++i < n) {
+      if (t = (typename = T[i]).type) _[t] = set$1(_[t], typename.name, callback);
+      else if (callback == null) for (t in _) _[t] = set$1(_[t], typename.name, null);
+    }
+
+    return this;
+  },
+  copy: function() {
+    var copy = {}, _ = this._;
+    for (var t in _) copy[t] = _[t].slice();
+    return new Dispatch(copy);
+  },
+  call: function(type, that) {
+    if ((n = arguments.length - 2) > 0) for (var args = new Array(n), i = 0, n, t; i < n; ++i) args[i] = arguments[i + 2];
+    if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
+    for (t = this._[type], i = 0, n = t.length; i < n; ++i) t[i].value.apply(that, args);
+  },
+  apply: function(type, that, args) {
+    if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
+    for (var t = this._[type], i = 0, n = t.length; i < n; ++i) t[i].value.apply(that, args);
+  }
+};
+
+function get$1(type, name) {
+  for (var i = 0, n = type.length, c; i < n; ++i) {
+    if ((c = type[i]).name === name) {
+      return c.value;
+    }
+  }
+}
+
+function set$1(type, name, callback) {
+  for (var i = 0, n = type.length; i < n; ++i) {
+    if (type[i].name === name) {
+      type[i] = noop, type = type.slice(0, i).concat(type.slice(i + 1));
+      break;
+    }
+  }
+  if (callback != null) type.push({name: name, value: callback});
+  return type;
+}
+
 var xhtml = "http://www.w3.org/1999/xhtml";
 
 var namespaces = {
@@ -759,7 +842,7 @@ function contextListener(listener) {
   };
 }
 
-function parseTypenames$1(typenames) {
+function parseTypenames(typenames) {
   return typenames.trim().split(/^|\s+/).map(function(t) {
     var name = "", i = t.indexOf(".");
     if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
@@ -802,7 +885,7 @@ function onAdd(typename, value, options) {
 }
 
 function selection_on(typename, value, options) {
-  var typenames = parseTypenames$1(typename + ""), i, n = typenames.length, t;
+  var typenames = parseTypenames(typename + ""), i, n = typenames.length, t;
 
   if (arguments.length < 2) {
     var on = this.node().__on;
@@ -945,89 +1028,6 @@ function pointer(event, node) {
     }
   }
   return [event.pageX, event.pageY];
-}
-
-var noop = {value: () => {}};
-
-function dispatch() {
-  for (var i = 0, n = arguments.length, _ = {}, t; i < n; ++i) {
-    if (!(t = arguments[i] + "") || (t in _) || /[\s.]/.test(t)) throw new Error("illegal type: " + t);
-    _[t] = [];
-  }
-  return new Dispatch(_);
-}
-
-function Dispatch(_) {
-  this._ = _;
-}
-
-function parseTypenames(typenames, types) {
-  return typenames.trim().split(/^|\s+/).map(function(t) {
-    var name = "", i = t.indexOf(".");
-    if (i >= 0) name = t.slice(i + 1), t = t.slice(0, i);
-    if (t && !types.hasOwnProperty(t)) throw new Error("unknown type: " + t);
-    return {type: t, name: name};
-  });
-}
-
-Dispatch.prototype = dispatch.prototype = {
-  constructor: Dispatch,
-  on: function(typename, callback) {
-    var _ = this._,
-        T = parseTypenames(typename + "", _),
-        t,
-        i = -1,
-        n = T.length;
-
-    // If no callback was specified, return the callback of the given type and name.
-    if (arguments.length < 2) {
-      while (++i < n) if ((t = (typename = T[i]).type) && (t = get$1(_[t], typename.name))) return t;
-      return;
-    }
-
-    // If a type was specified, set the callback for the given type and name.
-    // Otherwise, if a null callback was specified, remove callbacks of the given name.
-    if (callback != null && typeof callback !== "function") throw new Error("invalid callback: " + callback);
-    while (++i < n) {
-      if (t = (typename = T[i]).type) _[t] = set$1(_[t], typename.name, callback);
-      else if (callback == null) for (t in _) _[t] = set$1(_[t], typename.name, null);
-    }
-
-    return this;
-  },
-  copy: function() {
-    var copy = {}, _ = this._;
-    for (var t in _) copy[t] = _[t].slice();
-    return new Dispatch(copy);
-  },
-  call: function(type, that) {
-    if ((n = arguments.length - 2) > 0) for (var args = new Array(n), i = 0, n, t; i < n; ++i) args[i] = arguments[i + 2];
-    if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
-    for (t = this._[type], i = 0, n = t.length; i < n; ++i) t[i].value.apply(that, args);
-  },
-  apply: function(type, that, args) {
-    if (!this._.hasOwnProperty(type)) throw new Error("unknown type: " + type);
-    for (var t = this._[type], i = 0, n = t.length; i < n; ++i) t[i].value.apply(that, args);
-  }
-};
-
-function get$1(type, name) {
-  for (var i = 0, n = type.length, c; i < n; ++i) {
-    if ((c = type[i]).name === name) {
-      return c.value;
-    }
-  }
-}
-
-function set$1(type, name, callback) {
-  for (var i = 0, n = type.length; i < n; ++i) {
-    if (type[i].name === name) {
-      type[i] = noop, type = type.slice(0, i).concat(type.slice(i + 1));
-      break;
-    }
-  }
-  if (callback != null) type.push({name: name, value: callback});
-  return type;
 }
 
 // These are typically used in conjunction with noevent to ensure that we can
@@ -4482,6 +4482,44 @@ const GRAPH_CONFIG = {
 //src/core/interactivity.js
 
 /**
+ * Computes and assigns superconcepts and subconcepts based on graph links.
+ * @param {Object} graphData - The graph data containing nodes and links.
+ */
+function computeSuperSubConcepts(graphData) {
+  
+  if (!graphData || !Array.isArray(graphData.nodes) || !Array.isArray(graphData.links)) {
+    console.error("❌ computeSuperSubConcepts received invalid graphData:", graphData);
+    return;
+}
+console.log("✅ computeSuperSubConcepts received:", graphData.nodes.length, "nodes and", graphData.links.length, "links");
+  // Ensure each node has superconcepts and subconcepts properties
+    graphData.nodes.forEach(node => {
+      if (!Array.isArray(node.superconcepts)) node.superconcepts = [];
+      if (!Array.isArray(node.subconcepts)) node.subconcepts = [];
+    });
+
+    // Traverse links to assign superconcepts and subconcepts
+    graphData.links.forEach(link => {
+        let sourceNode = graphData.nodes.find(n => n.id == link.source );
+        let targetNode = graphData.nodes.find(n => n.id == link.target );
+
+        if (!sourceNode || !targetNode) {
+          console.warn(`⚠️ Link references invalid nodes:`, link);
+          return;
+      }
+      sourceNode.subconcepts.push(targetNode); // Outgoing = Subconcept
+      targetNode.superconcepts.push(sourceNode); // Incoming = Superconcept
+        
+    });
+
+    //Debugging: Log relationships
+    graphData.nodes.forEach(node => {
+        console.log(`🔗 Node ${node.id} Superconcepts:`, node.superconcepts.map(n => n.id));
+        console.log(`🔗 Node ${node.id} Subconcepts:`, node.subconcepts.map(n => n.id));
+    });
+}
+
+/**
  * Adds interactivity to the graph, including zoom, pan, and drag behaviors to the graph.
  * @param {Object} svg - The SVG element containing the graph.
  * @param {Object} simulation - The D3 force simulation instance.
@@ -4550,8 +4588,8 @@ function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
         .style('display', 'inline-block') // Make tooltip visible
         .html(`
           <strong>ID:</strong> ${d.id}<br>
-          <strong>Label:</strong> ${d.label}<br>
-          <strong>Level:</strong> ${d.level}
+          <strong>Label:</strong> ${d.label|| 'No Label'}<br>
+          <strong>Level:</strong> ${d.level || 'N/A'}
           `); // Display node ID, label and level
     })
     .on('mouseout', () => {
@@ -4560,6 +4598,8 @@ function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
     })
     .on('click', function (event, clickedNode) {
       // Handle node selection
+
+      console.log(`📌 Node Clicked: ${clickedNode.id}`);
 
       // Track selected nodes for shortest path calculation
       selectedNodes.push(clickedNode.id);
@@ -4602,10 +4642,10 @@ function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
       selectedNodes = [];
     } else {
 
-      // Find neighbors
+      /* Find neighbors
       const superconcepts = [];
       const subconcepts = [];
-
+      
       linkGroup.each(function (link) {
         if (link.source.id === clickedNode.id) {
             subconcepts.push(link.target); // Outgoing link -> Subconcept
@@ -4613,6 +4653,21 @@ function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
             superconcepts.push(link.source); // Incoming link -> Superconcept
         }
     });
+      */
+
+    // Ensure relationships exist before accessing them
+    if (!clickedNode.superconcepts || !clickedNode.subconcepts) {
+      console.warn(`⚠️ Node ${clickedNode.id} missing superconcepts or subconcepts.`);
+      return;
+  }
+
+    // Use precomputed values instead of recalculating
+    const superconcepts = clickedNode.superconcepts;
+    const subconcepts = clickedNode.subconcepts;
+    
+    console.log(`🔗 Node ${clickedNode.id} Superconcepts:`, superconcepts.map(n => n.id));
+    console.log(`🔗 Node ${clickedNode.id} Subconcepts:`, subconcepts.map(n => n.id));
+
 
     // Format neighbor information
     const superconceptsInfo = superconcepts
@@ -4627,6 +4682,8 @@ function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
         <strong>Selected Node</strong><br>
         &ensp;  &emsp;ID: ${clickedNode.id}<br>
         &ensp;  &emsp;Label: ${clickedNode.label || 'No Label'}<br>
+        <strong>Extent Size:</strong> ${clickedNode.metrics.extentSize}&ensp;  &emsp;<strong>Intent Size:</strong> ${clickedNode.metrics.intentSize}<br>
+        <strong>Stability:</strong> ${clickedNode.metrics.stability}&ensp;  &emsp;<strong>Neighborhood Size:</strong> ${clickedNode.metrics.neighborhoodSize}<br>
         <strong>Superconcepts</strong>:${superconceptsInfo || 'None'}<br>
         <strong>Subconcepts:</strong> ${subconceptsInfo || 'None'}
         `);
@@ -4675,8 +4732,158 @@ nodeGroup.on('dblclick', () => {
 });
 }
 
+//src/core/reducedLabeling.js
+
+/**
+ * Extracts extent and intent from the node label.
+ * @param {Object} node - The node object containing the `label`.
+ * @returns {Object} - An object containing `extent` and `intent` arrays.
+ */
+function parseNodeLabel$1(node) {
+    if (!node.label) {
+        console.warn(`⚠️ Missing label for node ${node.id}. Defaulting to empty extent/intent.`);
+        return { extent: [], intent: [] };
+    }
+
+    const extentMatch = node.label.match(/Extent\s*\{([^}]*)\}/);
+    const intentMatch = node.label.match(/Intent\s*\{([^}]*)\}/);
+
+    return {
+        extent: extentMatch ? extentMatch[1].split(',').map(e => e.trim()).filter(e => e !== '') : [],
+        intent: intentMatch ? intentMatch[1].split(',').map(i => i.trim()).filter(i => i !== '') : []
+    };
+}
+
+/**
+ * Computes reduced labels for nodes based on their superconcepts and subconcepts.
+ * @param {Array} nodes - The array of nodes in the concept lattice.
+ * @param {Array} links - The array of links connecting nodes.
+ */
+function computeReducedLabels$1(nodes, links) {
+    console.log(`✅ computeReducedLabels received: ${nodes?.length || 0} nodes, ${links?.length || 0} links`);
+
+    if (!Array.isArray(nodes) || !Array.isArray(links)) {
+        console.error("❌ computeReducedLabels received invalid data!", { nodes, links });
+        return;
+    }
+
+    // Step 1: Ensure every node has necessary properties
+    nodes.forEach(node => {
+        if (!node || typeof node !== "object" || !node.id) {
+            console.warn(`⚠️ Skipping invalid node:`, node);
+            return;
+        }
+
+        const { extent, intent } = parseNodeLabel$1(node);
+        node.extent = extent;
+        node.intent = intent;
+
+        node.superconcepts = [];
+        node.subconcepts = [];
+        node.fullExtent = new Set(node.extent);
+        node.fullIntent = new Set(node.intent);
+    });
+
+    console.log("✅ Nodes after extent/intent processing:", nodes);
+
+    // Step 2: Compute superconcepts & subconcepts
+    computeSuperSubConcepts({ nodes, links });
+
+    // Identify top and bottom concepts
+    const topConcept = nodes.find(node => node.superconcepts.length === 0);
+    const bottomConcept = nodes.find(node => node.subconcepts.length === 0);
+
+    if (!topConcept || !bottomConcept) {
+        console.error("❌ Could not determine top and bottom concepts!");
+        return;
+    }
+
+    console.log(`✅ Top Concept: ${topConcept.id}`);
+    console.log(`✅ Bottom Concept: ${bottomConcept.id}`);
+
+    // Step 3: Compute full intent (top-down propagation)
+    nodes.forEach(node => {
+        node.superconcepts?.forEach(sup => {
+            sup.fullIntent?.forEach(attr => node.fullIntent.add(attr));
+        });
+        node.fullIntent = [...node.fullIntent]; // Convert Set to Array
+    });
+
+    // Step 4: Compute full extent (bottom-up propagation)
+    nodes.forEach(node => {
+        node.subconcepts?.forEach(sub => {
+            sub.fullExtent?.forEach(obj => node.fullExtent.add(obj));
+        });
+        node.fullExtent = [...node.fullExtent]; // Convert Set to Array
+    });
+
+    console.log("✅ Nodes after full extent/intent computation:", nodes);
+
+    // Step 5: Compute reduced labels
+    nodes.forEach(node => {
+        if (node === topConcept || node === bottomConcept) {
+            // Skip labeling for the top and bottom concepts
+            node.reducedExtent = [];
+            node.reducedIntent = [];
+            return;
+        }
+
+        const inheritedExtent = new Set();
+        node.subconcepts?.forEach(sub => sub.fullExtent?.forEach(obj => inheritedExtent.add(obj))); // Now from bottom-up
+
+        const inheritedIntent = new Set();
+        node.superconcepts?.forEach(sup => sup.fullIntent?.forEach(attr => inheritedIntent.add(attr))); // Now from top-down
+
+        // Reduced Extent: Remove inherited objects
+        node.reducedExtent = node.fullExtent.filter(obj => !inheritedExtent.has(obj));
+
+        // Reduced Intent: Remove inherited attributes
+        node.reducedIntent = node.fullIntent.filter(attr => !inheritedIntent.has(attr));
+
+        console.log(`✅ Node ${node.id} Reduced Labels:`, {
+            fullExtent: node.fullExtent,
+            fullIntent: node.fullIntent,
+            reducedExtent: node.reducedExtent,
+            reducedIntent: node.reducedIntent
+        });
+    });
+}
+
 //src/core/rendering.js 
 
+
+
+/**
+ * Updates node labels based on the selected labeling mode.
+ * @param {string} mode - The selected labeling mode ("default", "full", "reduced").
+ * @param {Object} labelGroup - The D3 selection of node labels.
+ */
+function updateLabels(mode, labelGroup) {
+  console.log(`Updating Labels: Mode = ${mode}`);
+
+  labelGroup.text(d => {
+      if (!d) return "";  // Handle undefined nodes
+
+      if (mode === "full") {
+          return d.label || d.id;  // Full mode: Use `label` from JSON, fallback to `id`
+      } else if (mode === "reduced") {
+          // Ensure reduced labels are computed before using them
+          if (!Array.isArray(d.reducedExtent) || !Array.isArray(d.reducedIntent)) {
+            console.warn(`⚠️ Reduced labels missing for node ${d.id}.`);
+            //return `(${d.extent?.join(", ") || "∅"}) | {${d.intent?.join(", ") || "∅"}}`;
+            return `(∅) | {∅}`;
+          }
+            let reducedExtent = d.reducedExtent.length > 0 ? `(${d.reducedExtent.join(", ")})` : "(∅)";
+            let reducedIntent = d.reducedIntent.length > 0 ? `{${d.reducedIntent.join(", ")}}` : "{∅}";
+           
+            console.log(`🔹 Node ${d.id} Updated Reduced Label: ${reducedExtent} | ${reducedIntent}`);
+            return `${reducedExtent} | ${reducedIntent}`;  // Reduced mode
+
+      } else {
+          return d.id;  // Default mode: Only show `id`
+      }
+  });
+}
 /**
  * Renders the graph with nodes and links
  * @param {string} container - The CSS selector for the container
@@ -4689,6 +4896,21 @@ function renderGraph(container, graphData, options) {
   //const { width, height } = options; // Destructure options for width and height
   
   const { width, height, padding } = { ...GRAPH_CONFIG.dimensions, ...options };
+
+  if (!graphData || !graphData.nodes) {
+    console.error("Error: graphData is missing nodes!", graphData);
+    return;
+}
+console.log("📌 Computing superconcepts and subconcepts...");
+computeSuperSubConcepts(graphData); // ✅ Correct place to compute relationships
+
+console.log("📌 Computing reduced labels with:", graphData.nodes?.length, "nodes");
+if (!Array.isArray(graphData.nodes)) {
+    console.error("❌ graphData.nodes is not valid:", graphData.nodes);
+} else {
+    computeReducedLabels$1(graphData.nodes, graphData.links);
+}
+
 
   /* Validate graph data
   if (!graphData || !graphData.nodes || !graphData.links) {
@@ -4752,7 +4974,7 @@ const dynamicRadius = Math.max(
     //.attr('r', GRAPH_CONFIG.node.defaultRadius) // Radius of the node
     //.attr('r', d =>Math.max(5, 100 / Math.sqrt(graphData.nodes.length))) // Dynamic radius
     .attr('r', dynamicRadius) // Use dynamic radius
-    .attr('fill',  GRAPH_CONFIG.node.color); // Default node color
+    .attr('fill',  (d) => d.color || GRAPH_CONFIG.node.color); // Use updated color or default node color
       
     // Adjust label position dynamically based on node's position
     const labelGroup = g.selectAll('.node-label')
@@ -4764,7 +4986,10 @@ const dynamicRadius = Math.max(
       //.attr('dy', d => d.y > height / 2 ? 25 : -25) // Position label above or below node
       .attr('dy', d => (d.y < height / 2 ? -GRAPH_CONFIG.node.labelOffset : GRAPH_CONFIG.node.labelOffset)) // Position label above or below based on node's vertical location
       //.text(d => d.label || d.id); // Fallback to ID if no label is provided
-      .text(d => d.id);
+      .text(d => d.id);// Default label
+
+    // Apply initial labeling mode (default mode)
+    updateLabels("default", labelGroup);
 
      // Delay to ensure rendering is complete before calling getBBox()
     // Adjust the SVG size dynamically based on the rendered content  
@@ -4835,14 +5060,14 @@ function centerGraph(svg, { width, height, padding, bbox }) {
 
   /*Get the bounding box of the group element
   const bbox = g.node().getBBox();
-
+*/
   // Check for invalid bounding box values
   if (!bbox || isNaN(bbox.width) || isNaN(bbox.height)) {
     console.error('Invalid bounding box:', bbox);
     return;
   }
 
-
+/*
   // Dynamically calculate padding based on the graph size (bounding box dimensions)
   const dynamicPadding = Math.max(padding, Math.sqrt(bbox.width * bbox.height) / 10); // Adjust factor for better results
   console.log('Dynamic Padding:', dynamicPadding);
@@ -4899,6 +5124,8 @@ function centerGraph(svg, { width, height, padding, bbox }) {
   // Apply translation to center the graph
   g.attr('transform', `translate(${translateX}, ${translateY})`);
   
+  // Debugging log
+  console.log('Graph centered with translation:', { translateX, translateY }); 
   /* Adjust the SVG viewBox for dynamic scaling
   svg.attr(
     'viewBox',
@@ -5094,13 +5321,16 @@ function calculateMetrics(graphData) {
       throw new Error('Invalid input: Ensure graphData includes nodes and links.');
     }
   
-    // Number of concepts is the number of nodes in the graph
-    const totalConcepts = graphData.nodes.length;
+     // **Global Metrics**
+    const totalConcepts = graphData.nodes.length;// Number of concepts is the number of nodes in the graph
+    const totalLinks = graphData.links.length; // Total number of links between concepts
+    const maxPossibleLinks = (totalConcepts * (totalConcepts - 1)) / 2; // Maximum possible links in a complete graph
+    const density = maxPossibleLinks > 0 ? (totalLinks / maxPossibleLinks).toFixed(4) : 0; // Ratio of actual links to possible links
   
     // Calculate the total number of unique objects across all nodes.
   // Each node's label contains an "Extent" block that specifies the objects it represents.
   // Extract and count unique objects
-  const totalObjects = new Set(
+  new Set(
     graphData.nodes.flatMap((node) => {
       // Extract the "Extent" part from the node's label using a regular expression.
       const match = node.label.match(/Extent\s*\{([^}]*)\}/);
@@ -5117,11 +5347,49 @@ function calculateMetrics(graphData) {
   // Calculate the total number of unique attributes across all nodes.
   // Each node's label contains an "Intent" block that specifies the attributes it represents.
   // Extract and count unique attributes
-  const totalAttributes = new Set(
-    graphData.nodes.flatMap((node) => {
+  const uniqueAttributes = new Set();
+  const uniqueObjects = new Set();
+
+  // Compute concept-specific metrics
+    graphData.nodes.forEach((node) => {
+
+      // Extract the "Extent" (objects) from the node's label using a regular expression
+      const extentMatch = node.label.match(/Extent\s*\{([^}]*)\}/);
+      
       // Extract the "Intent" part from the node's label using a regular expression.
-      const match = node.label.match(/Intent\s*\{([^}]*)\}/);
-      // If a match is found, split the contents of the "Intent" by commas and trim whitespace.
+      const intentMatch = node.label.match(/Intent\s*\{([^}]*)\}/);
+      
+      // Parse the extent and intent into arrays, trimming whitespace and filtering out empty values
+      const extent = extentMatch ? extentMatch[1].split(',').map(e => e.trim()).filter(Boolean) : [];
+      const intent = intentMatch ? intentMatch[1].split(',').map(a => a.trim()).filter(Boolean) : [];
+
+      // Add each unique object and attribute to the respective sets
+      extent.forEach(obj => uniqueObjects.add(obj));
+      intent.forEach(attr => uniqueAttributes.add(attr));
+
+      // **Concept-level Metrics**
+      // Stability: Proportion of the extent size to the sum of extent and intent sizes
+      const stability = (extent.length + intent.length) > 0
+          ? (extent.length / (extent.length + intent.length)).toFixed(4)
+          : 0;
+
+      // Neighborhood size: Number of direct links (edges) connected to the node
+      const neighborhoodSize = graphData.links.filter(link =>
+          link.source.id === node.id || link.target.id === node.id
+      ).length;
+
+      // Attach the calculated metrics to the node object for later use
+      node.metrics = {
+          stability, // The stability of the concept
+          neighborhoodSize, // Number of connections for this concept
+          extentSize: extent.length, // Number of objects in the extent
+          intentSize: intent.length, // Number of attributes in the intent
+      };
+  });
+
+  // Return global metrics for the entire lattice
+
+      /* If a match is found, split the contents of the "Intent" by commas and trim whitespace.
       return match 
       ? match[1]
         .split(',')
@@ -5130,29 +5398,231 @@ function calculateMetrics(graphData) {
       : [];
     })
   ).size; // Use a Set to ensure unique attributes are counted.
-
+*/
   // Return an object containing the calculated metrics.
     return {
       totalConcepts,
-      totalObjects,
-      totalAttributes,
+      totalObjects: uniqueObjects.size,
+      totalAttributes: uniqueAttributes.size,
+      density, // Density of the lattice (global connectivity)
+      averageStability: (
+        // Calculate the average stability of all concepts
+          graphData.nodes.reduce((sum, node) => sum + parseFloat(node.metrics.stability || 0), 0) /
+          totalConcepts
+      ).toFixed(4),
     };
   }
 
-//src/core/lattice.js
-
+// src/core/canonicalBase.js
 
 /**
- * Updates the metrics in the DOM.
- * @param {Object} metrics - The metrics to display.
+ * Extracts concepts (extent and intent) from graph data.
+ * @param {Object} graphData - The graph data containing nodes.
+ * @returns {Array} - An array of concepts with "extent" and "intent".
  */
-// Function to update metrics in the DOM
-function updateMetricsInDOM(metrics) {
-  document.getElementById('total-concepts').textContent = metrics.totalConcepts;
-  document.getElementById('total-objects').textContent = metrics.totalObjects;
-  document.getElementById('total-attributes').textContent = metrics.totalAttributes;
-}
+function extractConceptsFromGraph(graphData) {
+    return graphData.nodes.map(node => {
+      const extentMatch = node.label.match(/Extent\s*{([^}]*)}/);
+      const intentMatch = node.label.match(/Intent\s*{([^}]*)}/);
+  
+      const extent = extentMatch 
+        ? extentMatch[1]
+            .split(',')
+            .map(item => item.trim()) 
+        : [];
+      const intent = intentMatch 
+        ? intentMatch[1]
+            .split(',')
+            .map(item => item.trim()) 
+        : [];
+  
+      return { extent, intent };
+    });
+  }
 
+/**
+ * Computes the canonical base (Duquenne–Guigues Base) for a given concept lattice.
+ * @param {Array} concepts - The list of concepts, where each concept is an object with "extent" and "intent".
+ * @returns {Array} - The canonical base as an array of implications (each implication has "premise" and "conclusion").
+ */
+function computeCanonicalBase(concepts) {
+    const canonicalBase = [];
+  
+    // Helper function to compute the closure of a set of attributes (intent)
+    const computeClosure = (attributes) => {
+      return concepts
+        .filter(concept => attributes.every(attr => concept.intent.includes(attr)))
+        .reduce((closure, concept) => {
+          concept.intent.forEach(attr => {
+            if (!closure.includes(attr)) {
+              closure.push(attr);
+            }
+          });
+          return closure;
+        }, []);
+    };
+  
+    // Iterate over each concept to generate implications
+    concepts.forEach(concept => {
+      const premise = [...concept.intent]; // Start with the concept's intent
+      const closure = computeClosure(premise);
+      const conclusion = closure.filter(attr => !premise.includes(attr)); // Attributes in closure but not in premise
+  
+      if (conclusion.length > 0) {
+        canonicalBase.push({ premise, conclusion });
+      }
+    });
+  
+    // Minimize the canonical base
+    const minimizedBase = minimizeImplications(canonicalBase);
+  
+    return minimizedBase;
+  }
+  
+  /**
+   * Minimizes a set of implications to ensure the canonical base is minimal.
+   * @param {Array} implications - The list of implications (each with "premise" and "conclusion").
+   * @returns {Array} - The minimized set of implications.
+   */
+  function minimizeImplications(implications) {
+    const minimized = [];
+  
+    implications.forEach(implication => {
+      const { premise, conclusion } = implication;
+  
+      // Check if the premise can be reduced while preserving the implication
+      const reducedPremise = premise.filter(attr => {
+        const testPremise = premise.filter(a => a !== attr);
+        const closure = computeClosureForImplications(testPremise, minimized);
+        return !conclusion.every(attr => closure.includes(attr));
+      });
+  
+      minimized.push({ premise: reducedPremise, conclusion });
+    });
+  
+    return minimized;
+  }
+  
+  /**
+   * Computes the closure of a set of attributes using a given set of implications.
+   * @param {Array} attributes - The set of attributes to compute the closure for.
+   * @param {Array} implications - The set of implications to use.
+   * @returns {Array} - The closure of the given attributes.
+   */
+  function computeClosureForImplications(attributes, implications) {
+    let closure = [...attributes];
+    let changed;
+  
+    do {
+      changed = false;
+  
+      implications.forEach(({ premise, conclusion }) => {
+        if (premise.every(attr => closure.includes(attr)) &&
+            conclusion.some(attr => !closure.includes(attr))) {
+          closure.push(...conclusion.filter(attr => !closure.includes(attr)));
+          changed = true;
+        }
+      });
+    } while (changed);
+  
+    return closure;
+  }
+
+// src/features/legend.js
+
+/**
+ * Updates the legend dynamically based on the color coding of the nodes.
+ */
+function updateLegend() {
+    const legendContainer = document.getElementById('legend');
+  
+    // Clear the existing legend
+    legendContainer.innerHTML = '';
+  
+    // Define the color mapping for the legend
+    const legendItems = [
+      { color: 'orange', label: 'Matches both extent and intent' },
+      { color: 'green', label: 'Matches extent' },
+      { color: 'gray', label: 'Matches intent' },
+      { color: 'blue', label: 'No match' },
+    ];
+  
+    // Dynamically create legend items
+    legendItems.forEach((item) => {
+      const legendItem = document.createElement('li');
+  
+      // Create the color indicator
+      const colorIndicator = document.createElement('span');
+      colorIndicator.style.backgroundColor = item.color;
+  
+      // Create the label text
+      const label = document.createTextNode(item.label);
+  
+      // Append color indicator and label to the legend item
+      legendItem.appendChild(colorIndicator);
+      legendItem.appendChild(label);
+  
+      // Append the legend item to the legend container
+      legendContainer.appendChild(legendItem);
+    });
+  }
+
+// src/features/setupFilters.js
+
+/**
+ * Sets up the filtering controls and handles the filtering process.
+ * 
+ * @param {Object} originalGraphData - The original unfiltered graph data.
+ */
+function setupFilterControls(originalGraphData) {
+  // Ensure the required elements exist in the DOM
+  const objectFilterInput = document.getElementById('object-filter');
+  const attributeFilterInput = document.getElementById('attribute-filter');
+  const applyFiltersButton = document.getElementById('apply-filters');
+
+  if (!objectFilterInput || !attributeFilterInput || !applyFiltersButton) {
+    console.error('Filter controls are missing in the DOM.');
+    return;
+  }
+
+  // Add event listener to the "Apply Filters" button
+  applyFiltersButton.addEventListener('click', () => {
+    // Get the object filter values from the input field
+    const objectFilter = objectFilterInput.value
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item !== '');
+
+    // Get the attribute filter values from the input field
+    const attributeFilter = attributeFilterInput.value
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item !== '');
+
+    console.log('Filter Criteria:', { objectFilter, attributeFilter });
+
+    try {
+      // Highlight nodes based on the specified filters
+      const updatedData = filterLattice(originalGraphData, {
+        objectFilter,
+        attributeFilter,
+      });
+
+      // Re-render the lattice visualization with the updated colors
+      createLattice(updatedData, { container: '#graph-container' });
+
+      // Update the legend
+      updateLegend();
+    } catch (error) {
+      console.error('Error during filtering:', error);
+    }
+  });
+}
+  
+  // Programmatically add the filter UI
+  //createFilterUI();
+
+//src/core/lattice.js
 
 /**
  * Creates a concept lattice based on the provided graph data.
@@ -5171,14 +5641,39 @@ function createLattice(graphData, options = {}) {
    
   // Validate graph data
    if (!graphData || !graphData.nodes || !graphData.links) {
-    throw new Error('Invalid graphData. Ensure it includes nodes and links.');
+    throw new Error('⚠️Invalid graphData. Ensure it includes nodes and links.');
   }
+  
+  console.log("📌 Nodes before reduced labeling:", graphData.nodes);
+  console.log("📌 Links before reduced labeling:", graphData.links);
+
+    // Ensure nodes and links are valid before calling reduced labeling
+
+    if (Array.isArray(graphData.nodes) && Array.isArray(graphData.links)) {
+      computeReducedLabels$1(graphData.nodes, graphData.links);
+  } else {
+      console.error("❌ Nodes or links are not in array format!", graphData);
+  }
+
+  // ✅ Compute superconcepts and subconcepts before rendering
+  computeSuperSubConcepts(graphData);
+
+  // ✅ Compute reduced labels before rendering
+  computeReducedLabels$1(graphData.nodes, graphData.links);
+
   // Calculate metrics and log them
   const metrics = calculateMetrics(graphData);
   console.log('Metrics:', metrics);
 
   // Update metrics in the DOM
   updateMetricsInDOM(metrics);
+
+  // Update Filtering
+  setupFilterControls(graphData);
+
+   // Clear existing graph content before rendering the new graph
+   const containerElement = select(container);
+   containerElement.selectAll('svg').remove();
   
   // Render the graph using dynamic dimensions and get the SVG elements
   const { svg, linkGroup, nodeGroup, labelGroup } = renderGraph(container, graphData, { width, height });
@@ -5213,9 +5708,28 @@ function createLattice(graphData, options = {}) {
   centerGraph(svg, { width, height, padding: GRAPH_CONFIG.dimensions.padding, bbox });
  }, 100);
 
+  // Add export options after rendering
+  addExportOptions(graphData, svg.node());
+
   // Return the SVG, simulation and metrics for further use
   return { svg, simulation, metrics };
 }
+
+
+/**
+ * Updates the metrics in the DOM.
+ * @param {Object} metrics - The metrics to display.
+ */
+// Function to update metrics in the DOM
+function updateMetricsInDOM(metrics) {
+  // Update the total count of concepts, objects, and attributes in the UI
+  document.getElementById('total-concepts').textContent = metrics.totalConcepts;
+  document.getElementById('total-objects').textContent = metrics.totalObjects;
+  document.getElementById('total-attributes').textContent = metrics.totalAttributes;
+  document.getElementById('lattice-density').textContent = metrics.density;
+  document.getElementById('lattice-stability').textContent = metrics.averageStability;
+}
+
 
 /**
  * Finds the shortest path between two nodes using Breadth-First Search (BFS).
@@ -5243,11 +5757,13 @@ function findShortestPath(graphData, startNodeId, endNodeId) {
     const path = queue.shift();
     const currentNode = path[path.length - 1];
 
+    // Return the path if the end node is reached
     if (currentNode === endNodeId) return path;
 
     if (!visited.has(currentNode)) {
       visited.add(currentNode);
 
+      // Add unvisited neighbors to the queue
       const neighbors = adjacencyList.get(currentNode) || [];
       neighbors.forEach((neighbor) => {
         if (!visited.has(neighbor)) queue.push([...path, neighbor]);
@@ -5255,21 +5771,317 @@ function findShortestPath(graphData, startNodeId, endNodeId) {
     }
   }
 
+  // Return an empty array if no path exists
   return [];
+}
+
+/**
+ * Filters the lattice graph data based on the provided filter criteria.
+ * 
+ * @param {Object} graphData - The graph data containing nodes and links.
+ * @param {Object} filterCriteria - An object with `objectFilter` and `attributeFilter` arrays.
+ * @returns {Object} - A filtered graph data object with updated nodes and links.
+ */
+function filterLattice(graphData, filterCriteria) {
+  
+  if (!graphData || !graphData.nodes || !graphData.links) {
+    throw new Error('Invalid graphData: Ensure it includes nodes and links.');
+  }
+  // Destructure object and attribute filters from the filter criteria
+  const { objectFilter, attributeFilter } = filterCriteria;
+
+  console.log('Graph Data Before Filtering:', graphData); // Debugging log
+  console.log('Filter Criteria:', filterCriteria); // Debugging log
+
+   // Update node colors based on the filtering criteria
+   graphData.nodes.forEach((node) => {
+    const extentMatch = objectFilter
+      ? objectFilter.some((obj) => node.label.includes(obj))
+      : false;
+    const intentMatch = attributeFilter
+      ? attributeFilter.some((attr) => node.label.includes(attr))
+      : false;
+
+    // Set color based on matching extent or intent
+    if (extentMatch && intentMatch) {
+      node.color = 'orange'; // Highlight nodes matching both criteria
+    } else if (extentMatch) {
+      node.color = 'green'; // Highlight nodes matching extent
+    } else if (intentMatch) {
+      node.color = 'gray'; // Highlight nodes matching intent
+    } else {
+      node.color = 'blue'; // Default color for nodes not matching
+    }
+  });
+
+  // Filter the nodes based on the extent (objects) and intent (attributes)
+  const filteredNodes = graphData.nodes.filter((node) => {
+    // Check if the node's extent matches all specified object filters
+    objectFilter
+      ? objectFilter.every(obj => node.label.includes(obj)) // Ensure every object in the filter is present in the node's label
+      : true; // If no filter is provided, allow all nodes
+    
+    // Check if the node's intent matches all specified attribute filters
+    attributeFilter
+      ? attributeFilter.every(attr => node.label.includes(attr)) // Ensure every attribute in the filter is present in the node's label
+      : true; // If no filter is provided, allow all nodes
+    
+    /* Include the node only if it matches both the extent and intent filters
+    return extentMatch && intentMatch;
+    */
+   
+   // Keep all nodes and links
+  return { nodes: graphData.nodes, links: graphData.links };
+  });
+
+  // Create a set of IDs for the filtered nodes for easy lookup
+  const filteredNodeIds = new Set(filteredNodes.map(node => node.id));
+
+  // Filter the links to include only those that connect filtered nodes
+  const filteredLinks = graphData.links.filter(
+    link =>
+      filteredNodeIds.has(link.source.id) && // Check if the source node is in the filtered set
+      filteredNodeIds.has(link.target.id)   // Check if the target node is in the filtered set
+  );
+  
+  console.log('Filtered Nodes:', filteredNodes); // Debugging log
+  console.log('Filtered Links:', filteredLinks); // Debugging log
+  
+  // Return the filtered graph data with updated nodes and links
+  return { nodes: filteredNodes, links: filteredLinks };
+}
+
+// src/features/fileUpload.js
+
+/**
+ * Sets up file upload handling and triggers concept lattice generation upon user interaction.
+ */
+
+function setupFileUpload() {
+
+    console.log("Initializing file upload setup...");
+
+    // Get references to the file input, compute button, and results container from the DOM
+    const fileInput = document.getElementById('file-upload');
+    const loadButton = document.getElementById('load-json-file');
+    const computeButton = document.getElementById('compute-canonical-base');
+    const resultsContainer = document.getElementById('results');
+
+
+     // Debug: Log what elements exist
+     console.log("🔍 Checking DOM elements...");
+     console.log("📂 fileInput:", fileInput);
+     console.log("📂 loadButton:", loadButton);
+     console.log("📂 computeButton:", computeButton);
+     console.log("📂 resultsContainer:", resultsContainer);
+
+     // Debug: Log elements
+    console.log("🔍 Checking DOM elements before setup...", {
+        fileInput, loadButton, computeButton, resultsContainer
+    });
+
+    // Validate elements
+    if (!fileInput || !loadButton || !computeButton || !resultsContainer) {
+        console.error('File upload elements are missing in the DOM.');
+        return;
+    }
+
+    console.log("✅ File upload elements exist. Running `setupFileUpload()` now...");
+
+    let uploadedData = null; // Variable to store the uploaded JSON file data
+
+    // File selection event
+    fileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0]; // Get the selected file
+
+        // Check if a file was selected
+        if (!file) {
+            console.warn("⚠️ No file selected. Waiting for a valid upload.");
+            return;
+        }
+
+        console.log("📂 File selected:", file.name);
+
+        const reader = new FileReader(); // Create a FileReader to read the file
+
+        /**
+         * Parses the JSON content from the uploaded file.
+         * @param {ProgressEvent} event - The file read event containing the JSON data.
+         */
+        reader.onload = (event) => {
+            try {
+                // Parse the uploaded JSON file and store it
+                uploadedData = JSON.parse(event.target.result);
+                console.log('📂 Successfully loaded JSON Data:', uploadedData);
+                
+            } catch (error) {
+                console.error('Error processing JSON file:', error);
+                alert('Invalid JSON file. Please check your file.');
+                uploadedData = null; // Reset the data in case of an error
+            }
+        };
+
+        reader.readAsText(file); // Read the file as text
+    });
+
+    // When "Load JSON File" is clicked, process the file
+    loadButton.addEventListener("click", () => {
+        if (!uploadedData) {
+            console.warn("⚠️ No file uploaded. Cannot proceed.");
+            alert("⚠️ Please upload a JSON file first.");
+            return;
+        }
+
+        console.log("📊 Computing metrics and visualizing lattice...");
+
+        // Compute metrics and display metrics
+        const metrics = calculateMetrics(uploadedData);
+    
+        // Update metrics in UI
+        document.getElementById('total-concepts').textContent = metrics.totalConcepts;
+        document.getElementById('total-objects').textContent = metrics.totalObjects;
+        document.getElementById('total-attributes').textContent = metrics.totalAttributes;
+
+        // Visualize lattice immediately after clicking load
+        createLattice(uploadedData, { container: "#graph-container" });
+
+        // Setup filters
+        setupFilterControls(uploadedData);
+    });
+
+
+    /**
+     * Handles the Compute button click event to process the uploaded data.
+     */
+    computeButton.addEventListener('click', () => {
+        
+       // const file = fileInput.files[0];
+
+       // Ensure that a file has been uploaded before computing
+       if (!uploadedData) {
+        console.warn("⚠️ No file uploaded. Cannot compute canonical base.");
+        alert('⚠️ Please upload a JSON file first.');
+        return;
+    }
+
+    try {
+        /**
+         * Extracts concepts from the uploaded JSON data.
+         * @returns {Array} List of extracted concepts (each with extent and intent).
+         */
+        const concepts = extractConceptsFromGraph(uploadedData);
+        console.log('Extracted Concepts:', concepts);
+
+        /**
+         * Computes the canonical base (implication rules) for the extracted concepts.
+         * @returns {Array} List of implications, each with a premise and conclusion.
+         */
+        const canonicalBase = computeCanonicalBase(concepts);
+        console.log('Computed Canonical Base:', canonicalBase);
+        
+
+        /**
+         * Displays the computed canonical base in the results section.
+         * @param {Array} canonicalBase - The computed implications to display.
+         */
+        resultsContainer.textContent = JSON.stringify(canonicalBase, null, 2);
+
+    } catch (error) {
+        console.error('❌Error computing canonical base:', error);
+        alert('❌Error in computation. Please check your file format.');
+    }
+});
+        /*const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const graphData = JSON.parse(event.target.result);
+                console.log('Graph Data:', graphData);
+
+                // Additional logic for processing the uploaded file
+            } catch (error) {
+                console.error('Error reading or processing file:', error);
+                alert('Invalid JSON file.');
+            }
+        };
+
+        reader.readAsText(file);
+    });*/
+
+
 }
 
 // src/index.js 
 
-document.addEventListener('DOMContentLoaded', () => {
+let originalGraphData = null; // Store uploaded dataset for later processing (ex. filtering)
+
+/**
+ * Handles dataset visualization after file upload or predefined dataset.
+ * @param {Object} jsonData - The parsed JSON graph data.
+ */
+
+function visualizeDataset(jsonData) {
+  try {
+     console.log('Loaded dataset:', jsonData);
+
+     if (!jsonData || !jsonData.nodes || !jsonData.links) {
+      console.error("❌ visualizeDataset: Invalid dataset structure!", jsonData);
+      alert("Error: Dataset structure is invalid.");
+      return;
+  }
+
+     originalGraphData = jsonData; // Store dataset for filtering.
+
+     // Ensure each node has a valid extent/intent
+     jsonData.nodes.forEach(node => {
+      const parsed = parseNodeLabel(node);
+      node.extent = parsed.extent;
+      node.intent = parsed.intent;
+
+      // Debugging: Log each node after parsing
+      console.log(`🔍 Node ${node.id} Parsed Label:`, node.label, "| Extent:", node.extent, "| Intent:", node.intent);
+
+  });
+
+     // Compute Superconcepts and Subconcepts first
+     console.log("📌 Computing superconcepts and subconcepts...");
+     computeSuperSubConcepts(jsonData);
+
+      // Compute reduced labels after ensuring relationships
+      console.log("📌 Computing reduced labels...");   
+      computeReducedLabels(jsonData.nodes, jsonData.links);
+
+      // Create the concept lattice visualization
+      createLattice(jsonData, { container: '#graph-container' });
+
+      // Compute and display metrics
+      const metrics = calculateMetrics(jsonData);
+      document.getElementById('total-concepts').textContent = metrics.totalConcepts;
+      document.getElementById('total-objects').textContent = metrics.totalObjects;
+      document.getElementById('total-attributes').textContent = metrics.totalAttributes;
+
+      // Set up legend and filtering controls after visualization
+      updateLegend();
+      setupFilterControls(originalGraphData);
+
+  } catch (err) {
+      console.error('Error visualizing dataset:', err);
+      alert('❌ Error processing dataset. Please check the uploaded file.');
+  }
+}
+
+/**
+* Checks if a dataset is provided via `data-dataset` in `index.html`.
+* If provided, loads it automatically.
+*/
+function checkForPreloadedDataset() {
   // Get the dataset path from the script tag's data-dataset attribute
   const scriptTag = document.querySelector('script[data-dataset]');
   const datasetPath = scriptTag?.getAttribute('data-dataset');
  
-
-  if (!datasetPath) {
-    console.error('Dataset path not provided in the script tag.');
-    return; // Stop execution if dataset path is missing
-  }
+// Ensure dataset path is provided
+  if (datasetPath) {
+    console.error('Preloading dataset from: ${datasetPath}');
+ 
 
   // Fetch graph data from the specified JSON file
   fetch(datasetPath)
@@ -5280,52 +6092,57 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     return response.json() // Parse JSON data
   })
-  .then((data) => {
-    // Debug log for dataset content
-    console.log('Loaded dataset:', data);
-      createLattice(data, { container: '#graph-container' });
-    })
-    .catch((err) => console.error('Error loading graph data:', err));
-  });
+  .then((data) => 
+    {
+      visualizeDataset(data); // Load dataset into visualization
+  })
+  .catch((err) => {
+    console.error('Error loading preloaded dataset:', err);
+});
 
-   /* .then(graphData => {
-      const { width, height } = GRAPH_CONFIG.dimensions;
+} else {
+  console.log("No predefined dataset found. Waiting for file upload.");
+}
+}
 
-       // Create the concept lattice graph
-       const { svg } = createLattice(graphData, {
-        container: '#graph-container', // Specify the graph container that matches the ID in your HTML
-        width,
-        height,
-      });
 
-      // Adjust the height of the container dynamically based on the graph size
-      const graphContainer = document.getElementById('graph-container');
-      //const svg = document.querySelector('#graph-container svg'); // Select the SVG element created for the graph
-      
-        if (svg) {
-          const bbox = svg.getBBox(); // Get bounding box of the graph
-          //const { width, height } = bbox; 
-          const padding = GRAPH_CONFIG.dimensions.padding;
-
-          //const { width: bboxWidth, height: bboxHeight } = bbox;
-
-        // Dynamically adjust the container and SVG sizes
-        graphContainer.style.height = `${bbox.height + padding * 2}px`; // Add some padding to avoid cuts
-        svg.setAttribute('width', bbox.width + padding * 2); // Adjust SVG width with padding
-        svg.setAttribute('height', bbox.height + padding * 2); // Adjust SVG height with padding
-      }
-    })
+/**
+ * Initializes the application on DOM load.
+ */
+document.addEventListener('DOMContentLoaded', () => {
   
-      .catch(error => {
-      console.error('Error loading graph data:', error);
-    });
-  })*/
-/*
-    fetch(datasetPath)
-        .then((res) => res.json())
-        //.then((data) => createLattice(data, { container: '#graph-container', ...GRAPH_CONFIG.dimensions }))
-        .then((graphData) => {
-          createLattice(graphData, { container: '#graph-container', ...GRAPH_CONFIG.dimensions });
-      })
-      .catch((err) => console.error('Error loading data:', err));
-});*/
+  console.log("📌 DOM fully loaded.");
+
+  // First check if a dataset exists in `index.html`
+  checkForPreloadedDataset(); 
+
+  setTimeout(() => {
+    console.log("🔍 Checking for file upload elements before setup...");
+    setupFileUpload(); // Ensure DOM elements exist before setup
+}, 500);
+  console.log("✅ Initializing file upload...");
+
+  setupFileUpload(); // Enable file upload functionality. Runs only when the DOM is ready
+ 
+  // Labeling mode change handler
+  const labelModeSelector = document.getElementById('labeling-mode');
+  if (labelModeSelector) {
+      labelModeSelector.addEventListener('change', () => {
+          const selectedMode = labelModeSelector.value;
+          console.log(`🔄 Switching Labeling Mode to: ${selectedMode}`);
+          
+          // Ensure nodes and labels exist before updating
+          const svg = select('svg');
+          const labelGroup = svg.selectAll('.node-label');
+          if (!labelGroup.empty()) {
+              updateLabels(selectedMode, labelGroup);
+          }
+      });
+  }
+  /*
+  waitForElement('#file-upload', () => {
+    console.log("✅ File upload elements exist. Running `setupFileUpload()` now...");
+    setupFileUpload();
+  });
+  */
+});
