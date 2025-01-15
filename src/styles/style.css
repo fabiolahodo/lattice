@@ -187,4 +187,40 @@ th, td {
   padding: 8px;
 }
 
+
+#legend-container {
+  margin-bottom: 20px;
+  font-family: Arial, sans-serif;
+}
+
+#legend {
+  list-style-type: none;
+  padding: 0;
+}
+
+#legend li {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+#legend li span {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  margin-right: 10px;
+  border-radius: 50%; /* Makes the color indicator a circle */
+  border: 1px solid #000; /* Optional: Add a border for better visibility */
+}
+
+#results {
+  margin-top: 20px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  background-color: #f9f9f9;
+}
+pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
   
