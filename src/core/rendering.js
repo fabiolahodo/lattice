@@ -3,9 +3,43 @@
 // Import necessary dependencies
 import { select } from 'd3-selection';
 import * as d3 from 'd3';
-import { addNodeInteractivity } from './interactivity.js';
+import { addNodeInteractivity, computeSuperSubConcepts} from './interactivity.js';
 import { GRAPH_CONFIG } from './config.js';
+import { computeReducedLabels } from './reducedLabeling.js';
 
+
+
+/**
+ * Updates node labels based on the selected labeling mode.
+ * @param {string} mode - The selected labeling mode ("default", "full", "reduced").
+ * @param {Object} labelGroup - The D3 selection of node labels.
+ */
+export function updateLabels(mode, labelGroup) {
+  console.log(`Updating Labels: Mode = ${mode}`);
+
+  labelGroup.text(d => {
+      if (!d) return "";  // Handle undefined nodes
+
+      if (mode === "full") {
+          return d.label || d.id;  // Full mode: Use `label` from JSON, fallback to `id`
+      } else if (mode === "reduced") {
+          // Ensure reduced labels are computed before using them
+          if (!Array.isArray(d.reducedExtent) || !Array.isArray(d.reducedIntent)) {
+            console.warn(`⚠️ Reduced labels missing for node ${d.id}.`);
+            //return `(${d.extent?.join(", ") || "∅"}) | {${d.intent?.join(", ") || "∅"}}`;
+            return `(∅) | {∅}`;
+          }
+            let reducedExtent = d.reducedExtent.length > 0 ? `(${d.reducedExtent.join(", ")})` : "(∅)";
+            let reducedIntent = d.reducedIntent.length > 0 ? `{${d.reducedIntent.join(", ")}}` : "{∅}";
+           
+            console.log(`🔹 Node ${d.id} Updated Reduced Label: ${reducedExtent} | ${reducedIntent}`);
+            return `${reducedExtent} | ${reducedIntent}`;  // Reduced mode
+
+      } else {
+          return d.id;  // Default mode: Only show `id`
+      }
+  });
+}
 /**
  * Renders the graph with nodes and links
  * @param {string} container - The CSS selector for the container
@@ -18,6 +52,21 @@ export function renderGraph(container, graphData, options) {
   //const { width, height } = options; // Destructure options for width and height
   
   const { width, height, padding } = { ...GRAPH_CONFIG.dimensions, ...options };
+
+  if (!graphData || !graphData.nodes) {
+    console.error("Error: graphData is missing nodes!", graphData);
+    return;
+}
+console.log("📌 Computing superconcepts and subconcepts...");
+computeSuperSubConcepts(graphData); // ✅ Correct place to compute relationships
+
+console.log("📌 Computing reduced labels with:", graphData.nodes?.length, "nodes");
+if (!Array.isArray(graphData.nodes)) {
+    console.error("❌ graphData.nodes is not valid:", graphData.nodes);
+} else {
+    computeReducedLabels(graphData.nodes, graphData.links);
+}
+
 
   /* Validate graph data
   if (!graphData || !graphData.nodes || !graphData.links) {
@@ -81,7 +130,7 @@ const dynamicRadius = Math.max(
     //.attr('r', GRAPH_CONFIG.node.defaultRadius) // Radius of the node
     //.attr('r', d =>Math.max(5, 100 / Math.sqrt(graphData.nodes.length))) // Dynamic radius
     .attr('r', dynamicRadius) // Use dynamic radius
-    .attr('fill',  GRAPH_CONFIG.node.color) // Default node color
+    .attr('fill',  (d) => d.color || GRAPH_CONFIG.node.color) // Use updated color or default node color
       
     // Adjust label position dynamically based on node's position
     const labelGroup = g.selectAll('.node-label')
@@ -93,7 +142,10 @@ const dynamicRadius = Math.max(
       //.attr('dy', d => d.y > height / 2 ? 25 : -25) // Position label above or below node
       .attr('dy', d => (d.y < height / 2 ? -GRAPH_CONFIG.node.labelOffset : GRAPH_CONFIG.node.labelOffset)) // Position label above or below based on node's vertical location
       //.text(d => d.label || d.id); // Fallback to ID if no label is provided
-      .text(d => d.id);
+      .text(d => d.id);// Default label
+
+    // Apply initial labeling mode (default mode)
+    updateLabels("default", labelGroup);
 
      // Delay to ensure rendering is complete before calling getBBox()
     // Adjust the SVG size dynamically based on the rendered content  
@@ -164,14 +216,14 @@ export function centerGraph(svg, { width, height, padding, bbox }) {
 
   /*Get the bounding box of the group element
   const bbox = g.node().getBBox();
-
+*/
   // Check for invalid bounding box values
   if (!bbox || isNaN(bbox.width) || isNaN(bbox.height)) {
     console.error('Invalid bounding box:', bbox);
     return;
   }
 
-
+/*
   // Dynamically calculate padding based on the graph size (bounding box dimensions)
   const dynamicPadding = Math.max(padding, Math.sqrt(bbox.width * bbox.height) / 10); // Adjust factor for better results
   console.log('Dynamic Padding:', dynamicPadding);
@@ -228,6 +280,8 @@ export function centerGraph(svg, { width, height, padding, bbox }) {
   // Apply translation to center the graph
   g.attr('transform', `translate(${translateX}, ${translateY})`);
   
+  // Debugging log
+  console.log('Graph centered with translation:', { translateX, translateY }); 
   /* Adjust the SVG viewBox for dynamic scaling
   svg.attr(
     'viewBox',
