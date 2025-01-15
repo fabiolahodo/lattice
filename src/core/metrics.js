@@ -14,8 +14,11 @@ export function calculateMetrics(graphData) {
       throw new Error('Invalid input: Ensure graphData includes nodes and links.');
     }
   
-    // Number of concepts is the number of nodes in the graph
-    const totalConcepts = graphData.nodes.length;
+     // **Global Metrics**
+    const totalConcepts = graphData.nodes.length;// Number of concepts is the number of nodes in the graph
+    const totalLinks = graphData.links.length; // Total number of links between concepts
+    const maxPossibleLinks = (totalConcepts * (totalConcepts - 1)) / 2; // Maximum possible links in a complete graph
+    const density = maxPossibleLinks > 0 ? (totalLinks / maxPossibleLinks).toFixed(4) : 0; // Ratio of actual links to possible links
   
     // Calculate the total number of unique objects across all nodes.
   // Each node's label contains an "Extent" block that specifies the objects it represents.
@@ -37,11 +40,49 @@ export function calculateMetrics(graphData) {
   // Calculate the total number of unique attributes across all nodes.
   // Each node's label contains an "Intent" block that specifies the attributes it represents.
   // Extract and count unique attributes
-  const totalAttributes = new Set(
-    graphData.nodes.flatMap((node) => {
+  const uniqueAttributes = new Set();
+  const uniqueObjects = new Set();
+
+  // Compute concept-specific metrics
+    graphData.nodes.forEach((node) => {
+
+      // Extract the "Extent" (objects) from the node's label using a regular expression
+      const extentMatch = node.label.match(/Extent\s*\{([^}]*)\}/);
+      
       // Extract the "Intent" part from the node's label using a regular expression.
-      const match = node.label.match(/Intent\s*\{([^}]*)\}/);
-      // If a match is found, split the contents of the "Intent" by commas and trim whitespace.
+      const intentMatch = node.label.match(/Intent\s*\{([^}]*)\}/);
+      
+      // Parse the extent and intent into arrays, trimming whitespace and filtering out empty values
+      const extent = extentMatch ? extentMatch[1].split(',').map(e => e.trim()).filter(Boolean) : [];
+      const intent = intentMatch ? intentMatch[1].split(',').map(a => a.trim()).filter(Boolean) : [];
+
+      // Add each unique object and attribute to the respective sets
+      extent.forEach(obj => uniqueObjects.add(obj));
+      intent.forEach(attr => uniqueAttributes.add(attr));
+
+      // **Concept-level Metrics**
+      // Stability: Proportion of the extent size to the sum of extent and intent sizes
+      const stability = (extent.length + intent.length) > 0
+          ? (extent.length / (extent.length + intent.length)).toFixed(4)
+          : 0;
+
+      // Neighborhood size: Number of direct links (edges) connected to the node
+      const neighborhoodSize = graphData.links.filter(link =>
+          link.source.id === node.id || link.target.id === node.id
+      ).length;
+
+      // Attach the calculated metrics to the node object for later use
+      node.metrics = {
+          stability, // The stability of the concept
+          neighborhoodSize, // Number of connections for this concept
+          extentSize: extent.length, // Number of objects in the extent
+          intentSize: intent.length, // Number of attributes in the intent
+      };
+  });
+
+  // Return global metrics for the entire lattice
+
+      /* If a match is found, split the contents of the "Intent" by commas and trim whitespace.
       return match 
       ? match[1]
         .split(',')
@@ -50,12 +91,18 @@ export function calculateMetrics(graphData) {
       : [];
     })
   ).size; // Use a Set to ensure unique attributes are counted.
-
+*/
   // Return an object containing the calculated metrics.
     return {
       totalConcepts,
-      totalObjects,
-      totalAttributes,
+      totalObjects: uniqueObjects.size,
+      totalAttributes: uniqueAttributes.size,
+      density, // Density of the lattice (global connectivity)
+      averageStability: (
+        // Calculate the average stability of all concepts
+          graphData.nodes.reduce((sum, node) => sum + parseFloat(node.metrics.stability || 0), 0) /
+          totalConcepts
+      ).toFixed(4),
     };
   }
   
