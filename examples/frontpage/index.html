@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live in Water Concept Lattice</title>
+  <!-- Link to the stylesheet -->
+  <link rel="stylesheet" href="../../src/styles/style.css">
+  <style>
+    /* Additional styles for a professional look */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f8f9fa;
+      color: #333;
+    }
+
+    header {
+      background-color: #007bff;
+      color: white;
+      padding: 10px 20px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 1.8rem;
+    }
+
+    main {
+      padding: 20px;
+    }
+
+    section {
+      margin-bottom: 20px;
+      background-color: white;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    section h2, section h3 {
+      margin-top: 0;
+    }
+
+    .table-container {
+      max-height: 300px; /* Set a fixed height for the table container */
+      overflow-y: auto; /* Enable vertical scrolling */
+      overflow-x: auto; /* Enable horizontal scrolling */
+      border: 1px solid #ddd; /* Optional: Add a border around the table container */
+      padding: 5px; /* Optional: Add some padding around the table */
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Optional: Add a shadow for better visibility */
+    }
+
+    table {
+      width: max-content; /* Allow table to grow wider */
+      min-width: 100%; /* Ensure table fits container width at minimum */
+      border-collapse: collapse;
+    }
+
+    thead th {
+      position: sticky; /* Keep the header row fixed when scrolling */
+      top: 0; /* Sticky header should stick to the top of the container */
+      background-color: #f2f2f2; /* Background color for header row */
+      z-index: 1; /* Ensure the header row is above the table rows */
+      border: 1px solid #ddd; /* Match the cell border styles */
+      padding: 8px;
+      text-align: center;
+    }
+
+    tbody th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+
+    #filters, #metrics-container, #legend-container, #shortest-path-info {
+      margin-bottom: 20px;
+    }
+
+    #filters input {
+      margin-right: 10px;
+      padding: 5px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    #filters button {
+      background-color: #28a745;
+      color: white;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    #filters button:hover {
+      background-color: #218838;
+    }
+
+    #legend {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    #legend li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 5px;
+    }
+
+    #legend span {
+      display: inline-block;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      border: 1px solid #000;
+    }
+
+    #graph-container {
+      width: 100%;
+      height: 600px;
+      border: 1px solid #ddd;
+      background-color: #ffffff;
+    }
+
+    #tooltip {
+      position: absolute;
+      display: none;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 5px;
+      border-radius: 3px;
+      font-size: 0.8rem;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    #filter-legend-container {
+      display: flex;
+      justify-content: space-between; /* Distribute space evenly */
+      gap: 20px; /* Add space between filters and legend */
+      align-items: flex-start; /* Align content at the top */
+      margin-bottom: 20px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background-color: white;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    #labeling-save-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px; /* Space between the two dropdowns */
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background-color: white;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      width: fit-content;
+    }
+    
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Concept Lattice Visualization </h1>
+  </header>
+
+  <main>
+
+    <!-- File Upload Section -->
+    <section>
+      <h3>Upload JSON File</h3>
+      <div>
+        <input type="file" id="file-upload" accept=".json">
+        <button id="load-json-file">Load JSON File</button>
+      </div>
+    </section>
+
+    <!-- Table Section -->
+    <section>
+      <h3>Formal Context</h3>
+      <p>
+        This is a simple example of a concept lattice. Taken from <a href="https://upriss.github.io/fca/fcaintro.html">Ute Priss</a> website.
+      </p>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>needs water to live</th>
+              <th>lives in water</th>
+              <th>lives on land</th>
+              <th>needs chlorophyll</th>
+              <th>dicotyledon</th>
+              <th>monocotyledon</th>
+              <th>can move</th>
+              <th>has limbs</th>
+              <th>breast feeds</th>
+          </tr>
+        </thead>
+        <tbody></tbody> 
+        <tr>
+              <th>fish leech</th>
+              <td class="x">×</td>
+              <td class="x">×</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td class="x">×</td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <th>bream</th>
+              <td class="x">×</td>
+              <td class="x">×</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td class="x">×</td>
+              <td class="x">×</td>
+              <td></td>
+          </tr>
+          <tr>
+              <th>frog</th>
+              <td class="x">×</td>
+              <td class="x">×</td>
+              <td class="x">×</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td class="x">×</td>
+              <td class="x">×</td>
+              <td></td>
+          </tr>
+          <tr>
+              <th>dog</th>
+              <td class="x">×</td>
+              <td></td>
+              <td class="x">×</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td class="x">×</td>
+              <td class="x">×</td>
+              <td class="x">×</td>
+          </tr>
+          <tr>
+              <th>water weeds</th>
+              <td class="x">×</td>
+              <td class="x">×</td>
+              <td></td>
+              <td class="x">×</td>
+              <td></td>
+              <td class="x">×</td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <th>reed</th>
+              <td class="x">×</td>
+              <td></td>
+              <td class="x">×</td>
+              <td class="x">×</td>
+              <td></td>
+              <td class="x">×</td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <th>bean</th>
+              <td class="x">×</td>
+              <td></td>
+              <td class="x">×</td>
+              <td class="x">×</td>
+              <td class="x">×</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+          <tr>
+              <th>corn</th>
+              <td class="x">×</td>
+              <td></td>
+              <td class="x">×</td>
+              <td class="x">×</td>
+              <td></td>
+              <td class="x">×</td>
+              <td></td>
+              <td></td>
+              <td></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>      
+    </section>
+
+    <!-- Metrics Section -->
+    <section id="metrics-container">
+      <h2>Lattice Metrics</h2>
+      <ul>
+        <li><strong>Total Concepts:</strong> <span id="total-concepts">-</span></li>
+        <li><strong>Total Objects:</strong> <span id="total-objects">-</span></li>
+        <li><strong>Total Attributes:</strong> <span id="total-attributes">-</span></li>
+        <li><strong>Lattice Density:</strong> <span id="lattice-density">-</span></li>
+        <li><strong>Average Stability:</strong> <span id="lattice-stability">-</span></li>
+      </ul>
+    </section>
+
+    <section id="filter-legend-container">
+      <!-- Filters Section -->
+      <div id="filters">
+        <h3>Filter Options</h3>
+        <input type="text" id="object-filter" placeholder="Filter by objects (comma-separated)" />
+        <input type="text" id="attribute-filter" placeholder="Filter by attributes (comma-separated)" />
+        <button id="apply-filters">Apply Filters</button>
+      </div>
+    
+      <!-- Legend Section -->
+      <div id="legend-container">
+        <h3>Legend</h3>
+        <ul id="legend">
+          <li><span style="background-color: orange;"></span> Matches both extent and intent</li>
+          <li><span style="background-color: green;"></span> Matches extent</li>
+          <li><span style="background-color: gray;"></span> Matches intent</li>
+          <li><span style="background-color: blue;"></span> No match</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Graph Container -->
+    <section>
+      <h3>Concept Lattice Visualization</h3>
+      <div id="graph-container"></div>
+    <!-- Controls for Labeling Mode and Save As -->
+    <div id="labeling-save-container">
+      <div>
+        <label for="labeling-mode"><strong>Labeling Mode:</strong></label>
+        <select id="labeling-mode">
+          <option value="default">ID</option>
+          <option value="full">Full Labeling</option>
+          <option value="reduced">Reduced Labeling</option>
+        </select>
+      </div>
+      
+      <div>
+        <label for="save-as"><strong>Save as:</strong></label>
+        <select id="save-as">
+          <option value="export-json">JSON</option>
+          <option value="export-png">PNG</option>
+          <option value="export-csv">CSV</option>
+          <option value="export-pdf">PDF</option>
+        </select>
+      </div>
+    </div>
+    </section>
+
+   <!-- Compute Implications (Canonical Base) (Step 4) -->
+   <section>
+    <h3>Compute Canonical Base</h3>
+    <div>
+      <button id="compute-canonical-base">Compute Canonical Base</button>
+    </div>
+    <div id="results">
+    </div>
+  </section>
+
+    <!-- Tooltip -->
+    <div id="tooltip"></div>
+
+    <!-- Selected Node Details -->
+    <section>
+      <h3>Selected Node Details</h3>
+      <div id="selected-node-info">Click a node to see its details.</div>
+    </section>
+
+    <!-- Shortest Path Section -->
+    <section id="shortest-path-info">
+      <h3>Shortest Path</h3>
+      <p id="shortest-path-display">Click two nodes to calculate the shortest path.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2024 Concept Lattice Visualization Tool</p>
+  </footer>
+
+  <!-- Link to the JavaScript module -->
+  <!-- Include JavaScript -->
+  <!--<script type="module" src="../../dist/bundle.js" data-dataset="../../data/live-in-water.json"></script>-->
+  <script type="module" src="../../dist/bundle.js"></script>
+</body>
+</html>
