@@ -5,7 +5,7 @@ import { select } from 'd3-selection';
 import * as d3 from 'd3';
 import { addNodeInteractivity, computeSuperSubConcepts} from './interactivity.js';
 import { GRAPH_CONFIG } from './config.js';
-import { computeReducedLabels } from './reducedLabeling.js';
+import { computeReducedLabels, formatLabel } from './reducedLabeling.js';
 
 
 
@@ -27,14 +27,15 @@ export function updateLabels(mode, labelGroup) {
           if (!Array.isArray(d.reducedExtent) || !Array.isArray(d.reducedIntent)) {
             console.warn(`⚠️ Reduced labels missing for node ${d.id}.`);
             //return `(${d.extent?.join(", ") || "∅"}) | {${d.intent?.join(", ") || "∅"}}`;
-            return `(∅) | {∅}`;
+            return ""; // Skip empty labels
           }
-            let reducedExtent = d.reducedExtent.length > 0 ? `(${d.reducedExtent.join(", ")})` : "(∅)";
+            /*let reducedExtent = d.reducedExtent.length > 0 ? `(${d.reducedExtent.join(", ")})` : "(∅)";
             let reducedIntent = d.reducedIntent.length > 0 ? `{${d.reducedIntent.join(", ")}}` : "{∅}";
            
             console.log(`🔹 Node ${d.id} Updated Reduced Label: ${reducedExtent} | ${reducedIntent}`);
             return `${reducedExtent} | ${reducedIntent}`;  // Reduced mode
-
+          */
+        return formatLabel(d.reducedExtent, d.reducedIntent); // Use formatted reduced label
       } else {
           return d.id;  // Default mode: Only show `id`
       }
