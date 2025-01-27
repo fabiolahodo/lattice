@@ -3,7 +3,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import { terser } from 'rollup-plugin-terser';
 
 export default {
-  input: 'src/index.js', // Entry point
+  input: 'src/app/index.js', // Entry point
   output: [
     {
       file: 'dist/lattice.min.js',
@@ -21,4 +21,11 @@ export default {
     commonjs(), // Converts CommonJS modules to ES6
     terser(), // Minifies the output
   ],
+  onwarn(warning, warn) {
+    // Ignore circular dependency warnings from d3-selection
+    if (warning.code === 'CIRCULAR_DEPENDENCY' && /d3-selection/.test(warning.message)) {
+      return;
+    }
+    warn(warning); // Log other warnings
+  },
 };
