@@ -7,7 +7,7 @@
   <!-- Link to the stylesheet -->
   <link rel="stylesheet" href="../../src/styles/style.css">
   <style>
-    /* Additional styles for a professional look */
+    /* General body and layout styling */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
@@ -79,27 +79,81 @@
     #filters, #metrics-container, #legend-container, #shortest-path-info {
       margin-bottom: 20px;
     }
-
-    #filters input {
-      margin-right: 10px;
+ /* General styling for all input fields */
+    input {
       padding: 5px;
       font-size: 1rem;
       border: 1px solid #ccc;
       border-radius: 4px;
     }
 
-    #filters button {
-      background-color: #28a745;
+    /* Specific styling for file input */
+    input[type="file"] {
+      cursor: pointer; /* Add a pointer cursor for file inputs */
+    }
+
+    /* Filters-specific styling */
+    #filters input {
+      margin-right: 10px;
+    }
+
+    /* Centralized button styling */
+    button {
+      background-color: #007bff;
       color: white;
-      padding: 5px 10px;
       border: none;
+      padding: 8px 12px;
       border-radius: 4px;
       font-size: 1rem;
       cursor: pointer;
+      display: inline-block;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s ease;
     }
 
-    #filters button:hover {
-      background-color: #218838;
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    /* Flexbox container for buttons with accompanying text */
+    .button-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 10px;
+      background-color: #fff;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .flex-column {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .flex-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    p.description {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #555;
+    }
+
+    a.link {
+      color: #007bff;
+      text-decoration: none;
+    }
+
+    a.link:hover {
+      text-decoration: underline;
     }
 
     #legend {
@@ -166,7 +220,14 @@
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
       width: fit-content;
     }
+    button:hover {
+      background-color: #0056b3; /* For Load JSON File */
+    }
     
+    #convert-and-download:hover {
+      background-color: #218838; /* For Convert and Download */
+    }
+      
   </style>
 </head>
 <body>
@@ -179,10 +240,24 @@
     <!-- File Upload Section -->
     <section>
       <h3>Upload JSON File</h3>
-      <div>
-        <input type="file" id="file-upload" accept=".json">
-        <button id="load-json-file">Load JSON File</button>
-      </div>
+      <div class="flex-column">
+        <!-- Upload and Load Section -->
+        <div class="flex-row">
+          <input type="file" id="file-upload" accept=".json">
+          <button id="load-json-file"> Load JSON File </button>
+        </div>
+    
+        <!-- Conversion Information -->
+    <div class="button-container">
+      <p class="description">
+        If your file is in 
+        <a href="https://concepts.readthedocs.io/en/stable/advanced.html#custom-serialization-format" style="color: #007bff; text-decoration: none;">
+          this format
+        </a>, you can convert it into a suitable format.
+      </p>
+      <!-- Conversion button -->
+      <button id="convert-and-download">Convert and Download</button>
+    </div>
     </section>
 
     <!-- Table Section -->
@@ -325,9 +400,11 @@
       <!-- Filters Section -->
       <div id="filters">
         <h3>Filter Options</h3>
-        <input type="text" id="object-filter" placeholder="Filter by objects (comma-separated)" />
-        <input type="text" id="attribute-filter" placeholder="Filter by attributes (comma-separated)" />
-        <button id="apply-filters">Apply Filters</button>
+        <div class="flex-row">
+          <input type="text" id="object-filter" placeholder="Filter by objects (comma-separated)" />
+          <input type="text" id="attribute-filter" placeholder="Filter by attributes (comma-separated)" />
+          <button id="apply-filters">Apply Filters</button>
+        </div>    
       </div>
     
       <!-- Legend Section -->
