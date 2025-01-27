@@ -24,7 +24,29 @@ function parseNodeLabel(node) {
 }
 
 /**
+ * Formats extent and intent for visualization.
+ * Distinguishes between extent and intent with clear visual markers.
+ * @param {Array} extent - Array of extent elements (objects).
+ * @param {Array} intent - Array of intent elements (attributes).
+ * @returns {string} - Formatted label string for visualization.
+ */
+export function formatLabel(extent, intent) {
+    const extentLabel = extent.length > 0 ? extent.join(", ") : ""; // Skip empty
+    const intentLabel = intent.length > 0 ? intent.join(", ") : ""; // Skip empty
+
+    if (extentLabel && intentLabel) {
+        return `[Extent: ${extentLabel}] [Intent: ${intentLabel}]`;
+    } else if (extentLabel) {
+        return `[Extent: ${extentLabel}]`;
+    } else if (intentLabel) {
+        return `[Intent: ${intentLabel}]`;
+    }
+    return ""; // No label if both are empty
+}
+
+/**
  * Computes reduced labels for nodes based on their superconcepts and subconcepts.
+ * Ensures intents and extents are only assigned once to their valid concepts.
  * @param {Array} nodes - The array of nodes in the concept lattice.
  * @param {Array} links - The array of links connecting nodes.
  */
@@ -36,6 +58,10 @@ export function computeReducedLabels(nodes, links) {
         return;
     }
 
+    // Initialize tracking sets for global usage
+    const assignedExtents = new Set(); // Tracks already assigned extents (objects)
+    const assignedIntents = new Set(); // Tracks already assigned intents (attributes)
+
     // Step 1: Ensure every node has necessary properties
     nodes.forEach(node => {
         if (!node || typeof node !== "object" || !node.id) {
@@ -44,13 +70,15 @@ export function computeReducedLabels(nodes, links) {
         }
 
         const { extent, intent } = parseNodeLabel(node);
-        node.extent = extent;
-        node.intent = intent;
+        node.extent = extent || [];
+        node.intent = intent || [];
 
         node.superconcepts = [];
         node.subconcepts = [];
         node.fullExtent = new Set(node.extent);
         node.fullIntent = new Set(node.intent);
+        node.reducedExtent = [];
+        node.reducedIntent = [];
     });
 
     console.log("✅ Nodes after extent/intent processing:", nodes);
@@ -58,7 +86,7 @@ export function computeReducedLabels(nodes, links) {
     // Step 2: Compute superconcepts & subconcepts
     computeSuperSubConcepts({ nodes, links });
 
-    // Identify top and bottom concepts
+    /* Identify top and bottom concepts
     const topConcept = nodes.find(node => node.superconcepts.length === 0);
     const bottomConcept = nodes.find(node => node.subconcepts.length === 0);
 
@@ -69,37 +97,42 @@ export function computeReducedLabels(nodes, links) {
 
     console.log(`✅ Top Concept: ${topConcept.id}`);
     console.log(`✅ Bottom Concept: ${bottomConcept.id}`);
-
-    // Step 3: Compute full intent (top-down propagation)
+    */
+    // Step 3: Compute full intent (top-down propagation) and full extent (bottom-up propagation)
     nodes.forEach(node => {
-        node.superconcepts?.forEach(sup => {
-            sup.fullIntent?.forEach(attr => node.fullIntent.add(attr));
+        // Propagate intent from superconcepts
+        node.superconcepts?.forEach(superconcept => {
+            superconcept.fullIntent?.forEach(attr => node.fullIntent.add(attr));
         });
-        node.fullIntent = [...node.fullIntent]; // Convert Set to Array
+       node.fullIntent = [...node.fullIntent]; // Convert Set to Array
+ 
+    // Propagate extent from subconcepts
+    const inheritedExtent = new Set();
+    node.subconcepts?.forEach(subconcept => {
+        subconcept.fullExtent.forEach(obj => {
+            if (!node.fullExtent.has(obj)) {
+                node.fullExtent.add(obj);
+                inheritedExtent.add(obj); // Avoid duplication
+            }
+        });
     });
-
-    // Step 4: Compute full extent (bottom-up propagation)
-    nodes.forEach(node => {
-        node.subconcepts?.forEach(sub => {
-            sub.fullExtent?.forEach(obj => node.fullExtent.add(obj));
-        });
         node.fullExtent = [...node.fullExtent]; // Convert Set to Array
     });
-
     console.log("✅ Nodes after full extent/intent computation:", nodes);
 
-    // Step 5: Compute reduced labels
+    // Step 3: Compute reduced labels
     nodes.forEach(node => {
-        if (node === topConcept || node === bottomConcept) {
+       /* if (node === topConcept || node === bottomConcept) {
             // Skip labeling for the top and bottom concepts
             node.reducedExtent = [];
             node.reducedIntent = [];
             return;
         }
-
+        */    
         const inheritedExtent = new Set();
         node.subconcepts?.forEach(sub => sub.fullExtent?.forEach(obj => inheritedExtent.add(obj))); // Now from bottom-up
 
+         /*
         const inheritedIntent = new Set();
         node.superconcepts?.forEach(sup => sup.fullIntent?.forEach(attr => inheritedIntent.add(attr))); // Now from top-down
 
@@ -115,5 +148,40 @@ export function computeReducedLabels(nodes, links) {
             reducedExtent: node.reducedExtent,
             reducedIntent: node.reducedIntent
         });
+         */
+
+     // Compute reducedExtent by excluding objects already assigned to other nodes
+     node.reducedExtent = node.fullExtent.filter(obj => 
+         !assignedExtents.has(obj)&& !inheritedExtent.has(obj));
+     // Add the reducedExtent to the global tracker
+     node.reducedExtent.forEach(obj =>  assignedExtents.add(obj));
+
+     // Compute reducedIntent by excluding attributes already assigned to other nodes
+     node.reducedIntent = node.intent.filter(attr => !assignedIntents.has(attr));
+     // Add the reducedIntent to the global tracker
+     node.reducedIntent.forEach(attr =>assignedIntents.add(attr));
+    
+     console.log(`✅ Node ${node.id} Updated Reduced Label:`, {
+        reducedExtent: node.reducedExtent,
+        reducedIntent: node.reducedIntent
+    });
+ });
+
+
+// Final visualization or debug logs for verification
+visualizeReducedLabels(nodes);
+}
+
+/**
+ * Visualizes reduced labels with clear differentiation between extent and intent.
+ * @param {Array} nodes - Array of nodes in the lattice.
+ */
+function visualizeReducedLabels(nodes) {
+    nodes.forEach(node => {
+        console.log(
+            `Node ${node.id}:\n` +
+            ` - Reduced Extent: ${node.reducedExtent.join(", ")}\n` +
+            ` - Reduced Intent: ${node.reducedIntent.join(", ")}`
+        );
     });
 }
