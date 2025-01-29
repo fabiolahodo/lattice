@@ -26,9 +26,11 @@ export function createSimulation(graphData, linkGroup, nodeGroup, labelGroup, op
     if (node.y === undefined) node.y = height / 2;
   });
 */
+// Initialize node positions if not already set
+const layerSpacing = height / ((graphData.layers.length | 1) + 1);
  graphData.nodes.forEach((node) => {
         node.x = node.x || width / 2;
-        node.y = node.y || height / 2;
+        node.y = node.y || (node.layer !== undefined ? node.layer * layerSpacing : height / 2);
     });
   /* Dynamically calculate max link distance based on dataset size and canvas dimensions
   const baseDistance = Math.min(width, height) / 5; // A baseline distance proportional to the canvas size
