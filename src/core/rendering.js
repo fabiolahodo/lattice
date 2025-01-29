@@ -128,6 +128,8 @@ const dynamicRadius = Math.max(
     .enter() // Process each node in the data
     .append('circle') // Append a <circle> element for each node
     .attr('class', 'node') // Add a class for styling
+    .attr('cx', (d) => d.x) // Use precomputed x
+    .attr('cy', (d) => d.y) // Use precomputed y
     //.attr('r', GRAPH_CONFIG.node.defaultRadius) // Radius of the node
     //.attr('r', d =>Math.max(5, 100 / Math.sqrt(graphData.nodes.length))) // Dynamic radius
     .attr('r', dynamicRadius) // Use dynamic radius
