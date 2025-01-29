@@ -4755,7 +4755,29 @@ function parseNodeLabel$1(node) {
 }
 
 /**
+ * Formats extent and intent for visualization.
+ * Distinguishes between extent and intent with clear visual markers.
+ * @param {Array} extent - Array of extent elements (objects).
+ * @param {Array} intent - Array of intent elements (attributes).
+ * @returns {string} - Formatted label string for visualization.
+ */
+function formatLabel(extent, intent) {
+    const extentLabel = extent.length > 0 ? extent.join(", ") : ""; // Skip empty
+    const intentLabel = intent.length > 0 ? intent.join(", ") : ""; // Skip empty
+
+    if (extentLabel && intentLabel) {
+        return `[Extent: ${extentLabel}] [Intent: ${intentLabel}]`;
+    } else if (extentLabel) {
+        return `[Extent: ${extentLabel}]`;
+    } else if (intentLabel) {
+        return `[Intent: ${intentLabel}]`;
+    }
+    return ""; // No label if both are empty
+}
+
+/**
  * Computes reduced labels for nodes based on their superconcepts and subconcepts.
+ * Ensures intents and extents are only assigned once to their valid concepts.
  * @param {Array} nodes - The array of nodes in the concept lattice.
  * @param {Array} links - The array of links connecting nodes.
  */
@@ -4767,6 +4789,10 @@ function computeReducedLabels$1(nodes, links) {
         return;
     }
 
+    // Initialize tracking sets for global usage
+    const assignedExtents = new Set(); // Tracks already assigned extents (objects)
+    const assignedIntents = new Set(); // Tracks already assigned intents (attributes)
+
     // Step 1: Ensure every node has necessary properties
     nodes.forEach(node => {
         if (!node || typeof node !== "object" || !node.id) {
@@ -4775,13 +4801,15 @@ function computeReducedLabels$1(nodes, links) {
         }
 
         const { extent, intent } = parseNodeLabel$1(node);
-        node.extent = extent;
-        node.intent = intent;
+        node.extent = extent || [];
+        node.intent = intent || [];
 
         node.superconcepts = [];
         node.subconcepts = [];
         node.fullExtent = new Set(node.extent);
         node.fullIntent = new Set(node.intent);
+        node.reducedExtent = [];
+        node.reducedIntent = [];
     });
 
     console.log("✅ Nodes after extent/intent processing:", nodes);
@@ -4789,7 +4817,7 @@ function computeReducedLabels$1(nodes, links) {
     // Step 2: Compute superconcepts & subconcepts
     computeSuperSubConcepts({ nodes, links });
 
-    // Identify top and bottom concepts
+    /* Identify top and bottom concepts
     const topConcept = nodes.find(node => node.superconcepts.length === 0);
     const bottomConcept = nodes.find(node => node.subconcepts.length === 0);
 
@@ -4800,37 +4828,42 @@ function computeReducedLabels$1(nodes, links) {
 
     console.log(`✅ Top Concept: ${topConcept.id}`);
     console.log(`✅ Bottom Concept: ${bottomConcept.id}`);
-
-    // Step 3: Compute full intent (top-down propagation)
+    */
+    // Step 3: Compute full intent (top-down propagation) and full extent (bottom-up propagation)
     nodes.forEach(node => {
-        node.superconcepts?.forEach(sup => {
-            sup.fullIntent?.forEach(attr => node.fullIntent.add(attr));
+        // Propagate intent from superconcepts
+        node.superconcepts?.forEach(superconcept => {
+            superconcept.fullIntent?.forEach(attr => node.fullIntent.add(attr));
         });
-        node.fullIntent = [...node.fullIntent]; // Convert Set to Array
+       node.fullIntent = [...node.fullIntent]; // Convert Set to Array
+ 
+    // Propagate extent from subconcepts
+    const inheritedExtent = new Set();
+    node.subconcepts?.forEach(subconcept => {
+        subconcept.fullExtent.forEach(obj => {
+            if (!node.fullExtent.has(obj)) {
+                node.fullExtent.add(obj);
+                inheritedExtent.add(obj); // Avoid duplication
+            }
+        });
     });
-
-    // Step 4: Compute full extent (bottom-up propagation)
-    nodes.forEach(node => {
-        node.subconcepts?.forEach(sub => {
-            sub.fullExtent?.forEach(obj => node.fullExtent.add(obj));
-        });
         node.fullExtent = [...node.fullExtent]; // Convert Set to Array
     });
-
     console.log("✅ Nodes after full extent/intent computation:", nodes);
 
-    // Step 5: Compute reduced labels
+    // Step 3: Compute reduced labels
     nodes.forEach(node => {
-        if (node === topConcept || node === bottomConcept) {
+       /* if (node === topConcept || node === bottomConcept) {
             // Skip labeling for the top and bottom concepts
             node.reducedExtent = [];
             node.reducedIntent = [];
             return;
         }
-
+        */    
         const inheritedExtent = new Set();
         node.subconcepts?.forEach(sub => sub.fullExtent?.forEach(obj => inheritedExtent.add(obj))); // Now from bottom-up
 
+         /*
         const inheritedIntent = new Set();
         node.superconcepts?.forEach(sup => sup.fullIntent?.forEach(attr => inheritedIntent.add(attr))); // Now from top-down
 
@@ -4846,6 +4879,41 @@ function computeReducedLabels$1(nodes, links) {
             reducedExtent: node.reducedExtent,
             reducedIntent: node.reducedIntent
         });
+         */
+
+     // Compute reducedExtent by excluding objects already assigned to other nodes
+     node.reducedExtent = node.fullExtent.filter(obj => 
+         !assignedExtents.has(obj)&& !inheritedExtent.has(obj));
+     // Add the reducedExtent to the global tracker
+     node.reducedExtent.forEach(obj =>  assignedExtents.add(obj));
+
+     // Compute reducedIntent by excluding attributes already assigned to other nodes
+     node.reducedIntent = node.intent.filter(attr => !assignedIntents.has(attr));
+     // Add the reducedIntent to the global tracker
+     node.reducedIntent.forEach(attr =>assignedIntents.add(attr));
+    
+     console.log(`✅ Node ${node.id} Updated Reduced Label:`, {
+        reducedExtent: node.reducedExtent,
+        reducedIntent: node.reducedIntent
+    });
+ });
+
+
+// Final visualization or debug logs for verification
+visualizeReducedLabels(nodes);
+}
+
+/**
+ * Visualizes reduced labels with clear differentiation between extent and intent.
+ * @param {Array} nodes - Array of nodes in the lattice.
+ */
+function visualizeReducedLabels(nodes) {
+    nodes.forEach(node => {
+        console.log(
+            `Node ${node.id}:\n` +
+            ` - Reduced Extent: ${node.reducedExtent.join(", ")}\n` +
+            ` - Reduced Intent: ${node.reducedIntent.join(", ")}`
+        );
     });
 }
 
@@ -4871,14 +4939,15 @@ function updateLabels(mode, labelGroup) {
           if (!Array.isArray(d.reducedExtent) || !Array.isArray(d.reducedIntent)) {
             console.warn(`⚠️ Reduced labels missing for node ${d.id}.`);
             //return `(${d.extent?.join(", ") || "∅"}) | {${d.intent?.join(", ") || "∅"}}`;
-            return `(∅) | {∅}`;
+            return ""; // Skip empty labels
           }
-            let reducedExtent = d.reducedExtent.length > 0 ? `(${d.reducedExtent.join(", ")})` : "(∅)";
+            /*let reducedExtent = d.reducedExtent.length > 0 ? `(${d.reducedExtent.join(", ")})` : "(∅)";
             let reducedIntent = d.reducedIntent.length > 0 ? `{${d.reducedIntent.join(", ")}}` : "{∅}";
            
             console.log(`🔹 Node ${d.id} Updated Reduced Label: ${reducedExtent} | ${reducedIntent}`);
             return `${reducedExtent} | ${reducedIntent}`;  // Reduced mode
-
+          */
+        return formatLabel(d.reducedExtent, d.reducedIntent); // Use formatted reduced label
       } else {
           return d.id;  // Default mode: Only show `id`
       }
@@ -4971,6 +5040,8 @@ const dynamicRadius = Math.max(
     .enter() // Process each node in the data
     .append('circle') // Append a <circle> element for each node
     .attr('class', 'node') // Add a class for styling
+    .attr('cx', (d) => d.x) // Use precomputed x
+    .attr('cy', (d) => d.y) // Use precomputed y
     //.attr('r', GRAPH_CONFIG.node.defaultRadius) // Radius of the node
     //.attr('r', d =>Math.max(5, 100 / Math.sqrt(graphData.nodes.length))) // Dynamic radius
     .attr('r', dynamicRadius) // Use dynamic radius
@@ -5232,9 +5303,11 @@ function createSimulation(graphData, linkGroup, nodeGroup, labelGroup, options) 
     if (node.y === undefined) node.y = height / 2;
   });
 */
+// Initialize node positions if not already set
+const layerSpacing = height / ((graphData.layers.length | 1) + 1);
  graphData.nodes.forEach((node) => {
         node.x = node.x || width / 2;
-        node.y = node.y || height / 2;
+        node.y = node.y || (node.layer !== undefined ? node.layer * layerSpacing : height / 2);
     });
   /* Dynamically calculate max link distance based on dataset size and canvas dimensions
   const baseDistance = Math.min(width, height) / 5; // A baseline distance proportional to the canvas size
@@ -5422,21 +5495,27 @@ function calculateMetrics(graphData) {
  */
 function extractConceptsFromGraph(graphData) {
     return graphData.nodes.map(node => {
+       // Extract the Extent set from the node label using regex
       const extentMatch = node.label.match(/Extent\s*{([^}]*)}/);
+      // Extract the Intent set from the node label using regex
       const intentMatch = node.label.match(/Intent\s*{([^}]*)}/);
-  
+      
+      // Parse the Extent values if found; otherwise, return an empty array
       const extent = extentMatch 
         ? extentMatch[1]
-            .split(',')
-            .map(item => item.trim()) 
+            .split(',') // Split by comma
+            .map(item => item.trim()) // Remove unnecessary spaces
         : [];
+
+      // Parse the Intent values if found; otherwise, return an empty array
       const intent = intentMatch 
         ? intentMatch[1]
             .split(',')
             .map(item => item.trim()) 
         : [];
   
-      return { extent, intent };
+     // Return the concept as an object containing its Extent and Intent  
+     return { extent, intent };
     });
   }
 
@@ -5448,32 +5527,40 @@ function extractConceptsFromGraph(graphData) {
 function computeCanonicalBase(concepts) {
     const canonicalBase = [];
   
-    // Helper function to compute the closure of a set of attributes (intent)
+    /**
+     * Helper function to compute the closure of a given set of attributes (intent).
+     * The closure consists of all attributes that are implied by the given set.
+     * @param {Array} attributes - The attribute set to compute the closure for.
+     * @returns {Array} - The closure of the given attributes.
+     */
     const computeClosure = (attributes) => {
       return concepts
+      // Filter concepts that contain all attributes in the input set
         .filter(concept => attributes.every(attr => concept.intent.includes(attr)))
         .reduce((closure, concept) => {
+          // Add new attributes from the matched concepts
           concept.intent.forEach(attr => {
             if (!closure.includes(attr)) {
               closure.push(attr);
             }
           });
           return closure;
-        }, []);
+        }, []); // Start with an empty closure set
     };
   
-    // Iterate over each concept to generate implications
+    // Iterate over each concept in the lattice to generate implications
     concepts.forEach(concept => {
-      const premise = [...concept.intent]; // Start with the concept's intent
-      const closure = computeClosure(premise);
+      const premise = [...concept.intent]; // The premise starts as the concept's intent
+      const closure = computeClosure(premise); // Compute the closure of the premise
       const conclusion = closure.filter(attr => !premise.includes(attr)); // Attributes in closure but not in premise
   
+      // If the closure introduces new attributes, add the implication
       if (conclusion.length > 0) {
         canonicalBase.push({ premise, conclusion });
       }
     });
   
-    // Minimize the canonical base
+    // Minimize the canonical base by removing redundant implications
     const minimizedBase = minimizeImplications(canonicalBase);
   
     return minimizedBase;
@@ -5492,11 +5579,15 @@ function computeCanonicalBase(concepts) {
   
       // Check if the premise can be reduced while preserving the implication
       const reducedPremise = premise.filter(attr => {
+        // Create a test premise by removing one attribute
         const testPremise = premise.filter(a => a !== attr);
+        // Compute the closure of the test premise with the existing minimized implications
         const closure = computeClosureForImplications(testPremise, minimized);
+        // If removing the attribute removes the conclusion, it is necessary
         return !conclusion.every(attr => closure.includes(attr));
       });
   
+      // Add the minimized implication to the base
       minimized.push({ premise: reducedPremise, conclusion });
     });
   
@@ -5510,20 +5601,22 @@ function computeCanonicalBase(concepts) {
    * @returns {Array} - The closure of the given attributes.
    */
   function computeClosureForImplications(attributes, implications) {
-    let closure = [...attributes];
-    let changed;
+    let closure = [...attributes]; // Initialize closure with the given attributes
+    let changed; // Track whether the closure has changed
   
     do {
       changed = false;
   
       implications.forEach(({ premise, conclusion }) => {
+        // Check if the premise is fully contained in the current closure
         if (premise.every(attr => closure.includes(attr)) &&
             conclusion.some(attr => !closure.includes(attr))) {
+          // Add new attributes to the closure
           closure.push(...conclusion.filter(attr => !closure.includes(attr)));
-          changed = true;
+          changed = true; // Mark that a change occurred
         }
       });
-    } while (changed);
+    } while (changed); // Repeat until no further changes occur
   
     return closure;
   }
@@ -5622,6 +5715,87 @@ function setupFilterControls(originalGraphData) {
   // Programmatically add the filter UI
   //createFilterUI();
 
+// src/core/layering.js
+
+/**
+ * Assigns nodes to hierarchical layers using the provided `level` property.
+ * Ensures all dependencies are satisfied while placing nodes in appropriate layers.
+ * @param {Object} graphData - The graph data containing nodes and links.
+ * @returns {Array} - An array of layers, each containing nodes.
+ * @throws {Error} - If the graph data is invalid or malformed.
+ */
+function assignLayers$1(graphData) {
+    if (!graphData || !Array.isArray(graphData.nodes)) {
+        throw new Error("Invalid graph data: 'nodes' must be an array.");
+    }
+
+    const layers = [];
+    const width = 800; // Canvas width (adjustable)
+    const height = 600; // Canvas height (adjustable)
+    const layerSpacing = height / 10; // Vertical spacing between layers
+
+    // Group nodes by their `level` property
+    graphData.nodes.forEach((node) => {
+        const layer = node.level - 1; // Level 1 corresponds to layer 0
+        if (!layers[layer]) layers[layer] = [];
+        layers[layer].push(node);
+
+        // Assign initial x and y positions for the node
+        node.y = layer * layerSpacing; // Vertical spacing based on layer index
+        node.x = layers[layer].length * (width / (layers[layer].length + 1)); // Horizontal spacing within the layer
+    });
+
+    console.debug(
+        "Layers Assigned:",
+        layers.map((layer, index) => ({
+            layer: index + 1,
+            nodes: layer.map((node) => node.id),
+        }))
+    ); // Debug log for layer assignment
+    return layers;
+}
+
+/**
+ * Orders nodes within layers to reduce edge crossings using the barycenter heuristic.
+ * @param {Array} layers - The array of layers containing nodes.
+ * @param {Object} graphData - The graph data containing nodes and links.
+ * @throws {Error} - If the input data is invalid or malformed.
+ */
+function orderVerticesWithinLayers(layers, graphData) {
+    if (!Array.isArray(layers)) {
+        throw new Error("Invalid input: 'layers' must be an array.");
+    }
+    if (!graphData || !Array.isArray(graphData.nodes)) {
+        throw new Error("Invalid graph data: 'nodes' must be an array.");
+    }
+
+    layers.forEach((layer) => {
+        layer.sort((a, b) =>
+            computeBarycenter(a, graphData) - computeBarycenter(b, graphData)
+        );
+    });
+
+    console.debug("Vertices Ordered Within Layers");
+}
+
+/**
+ * Computes the barycenter for a node based on its neighbors' positions.
+ * Helps in minimizing edge crossings during node ordering.
+ * @param {Object} node - The node for which to compute the barycenter.
+ * @param {Object} graphData - The graph data containing nodes and links.
+ * @returns {number} - The computed barycenter value, or 0 if no neighbors.
+ */
+function computeBarycenter(node, graphData) {
+    const neighbors = [...node.superconcepts, ...node.subconcepts];
+    const neighborPositions = neighbors.map((neighbor) => {
+        const neighborNode = graphData.nodes.find((n) => n.id === neighbor.id);
+        return neighborNode ? neighborNode.x : 0; // Default to 0 if neighbor not found
+    });
+
+    if (neighborPositions.length === 0) return 0; // No neighbors, return 0
+    return neighborPositions.reduce((sum, x) => sum + x, 0) / neighborPositions.length;
+}
+
 //src/core/lattice.js
 
 /**
@@ -5658,6 +5832,24 @@ function createLattice(graphData, options = {}) {
   // ✅ Compute superconcepts and subconcepts before rendering
   computeSuperSubConcepts(graphData);
 
+  console.log("📌 Assigning layers using the Coffman-Graham Algorithm...");
+  const layers = assignLayers$1(graphData);
+  graphData.layers = layers; // Add layers to graphData
+  
+  // Set y-coordinates for nodes based on their assigned layers
+  const layerSpacing = height / (layers.length + 1);
+  layers.forEach((layer, layerIndex) => {
+      layer.forEach((node, nodeIndex) => {
+          node.y = layerIndex * layerSpacing; // Assign vertical spacing based on layer index
+          node.x = (nodeIndex + 1) * (width / (layer.length + 1)); // Horizontal spacing
+          node.layer = layerIndex; // Add layer information for constraints
+      });
+  });
+
+  // Order nodes within layers to minimize edge crossings
+  console.log("📌 Ordering nodes within layers...");
+  orderVerticesWithinLayers(layers, graphData);
+  
   // ✅ Compute reduced labels before rendering
   computeReducedLabels$1(graphData.nodes, graphData.links);
 
@@ -5851,6 +6043,105 @@ function filterLattice(graphData, filterCriteria) {
   return { nodes: filteredNodes, links: filteredLinks };
 }
 
+// src/core/latticeParser.js
+
+/**
+ * Parses the SERIALIZED data into a format suitable for visualization.
+ * @param {Object} serialized - The serialized lattice data.
+ * @returns {Object} Parsed data with nodes and links.
+ */
+function parseSerialized(serialized) {
+    const objects = serialized.objects || [];
+    const properties = serialized.properties || [];
+    serialized.context || [];
+    const lattice = serialized.lattice || [];
+
+    // Helper to create labels for nodes
+    const createLabel = (extents, intents) => {
+        const extentLabels = extents.map((index) => objects[index] || 'Unknown').join(', ');
+        const intentLabels = intents.map((index) => properties[index] || 'Unknown').join(', ');
+        return `Extent\n{${extentLabels}}\nIntent\n{${intentLabels}}`;
+    };
+
+    // Parse nodes
+    const nodes = lattice.map((latticeNode, index) => {
+        const [extents, intents] = latticeNode;
+        const label = createLabel(extents, intents);
+        const level = latticeNode[2]?.length || 0; // Use the size of upper neighbors as the level
+        return {
+            id: index, // Unique ID for the node
+            label,
+            level,
+        };
+    });
+
+    // Parse links
+    const links = [];
+    lattice.forEach((latticeNode, sourceIndex) => {
+        const [_, __, upperNeighbors, lowerNeighbors] = latticeNode;
+
+        // Add links to upper neighbors
+        upperNeighbors.forEach((upperIndex) => {
+            links.push({
+                source: sourceIndex,
+                target: upperIndex,
+            });
+        });
+
+        // Add links to lower neighbors
+        lowerNeighbors.forEach((lowerIndex) => {
+            links.push({
+                source: lowerIndex,
+                target: sourceIndex,
+            });
+        });
+    });
+
+    // Return parsed data
+    return { nodes, links };
+}
+
+/*
+/**
+ * Load serialized data from a file, parse it, and save the parsed output.
+ * @param {string} inputFilePath - Path to the input file with serialized data.
+ * @param {string} outputBasePath - Base path to save the parsed data.
+ */
+/*
+function processSerializedFile(inputFilePath, outputBasePath) {
+    // Ensure input file exists
+    if (!fs.existsSync(inputFilePath)) {
+        console.error(`Input file not found: ${inputFilePath}`);
+        return;
+    }
+
+    // Read serialized data from file
+    const serializedData = JSON.parse(fs.readFileSync(inputFilePath, 'utf-8'));
+
+    // Parse the serialized data
+    const parsedData = parseSerialized(serializedData);
+
+    // Create a new folder under the output base path
+    const folderName = `lattice_${Date.now()}`; // Use a timestamp for unique folder name
+    const outputFolder = path.join(outputBasePath, folderName);
+
+    if (!fs.existsSync(outputFolder)) {
+        fs.mkdirSync(outputFolder, { recursive: true });
+    }
+
+    // Save the parsed data as a JSON file
+    const outputFilePath = path.join(outputFolder, 'parsedLattice.json');
+    fs.writeFileSync(outputFilePath, JSON.stringify(parsedData, null, 2));
+    console.log(`Parsed data saved to: ${outputFilePath}`);
+}
+
+// Example usage
+const inputFilePath = path.join('input', 'bob-ros.json'); // Path to the input file
+const outputBasePath = 'data'; // Base path for the parsed output
+
+processSerializedFile(inputFilePath, outputBasePath);
+*/
+
 // src/features/fileUpload.js
 
 /**
@@ -5866,6 +6157,8 @@ function setupFileUpload() {
     const loadButton = document.getElementById('load-json-file');
     const computeButton = document.getElementById('compute-canonical-base');
     const resultsContainer = document.getElementById('results');
+    const convertButton = document.getElementById("convert-and-download");
+
 
 
      // Debug: Log what elements exist
@@ -5874,6 +6167,7 @@ function setupFileUpload() {
      console.log("📂 loadButton:", loadButton);
      console.log("📂 computeButton:", computeButton);
      console.log("📂 resultsContainer:", resultsContainer);
+     console.log("📂 convertButton:", convertButton);
 
      // Debug: Log elements
     console.log("🔍 Checking DOM elements before setup...", {
@@ -5881,7 +6175,7 @@ function setupFileUpload() {
     });
 
     // Validate elements
-    if (!fileInput || !loadButton || !computeButton || !resultsContainer) {
+    if (!fileInput || !loadButton || !computeButton || !resultsContainer || !convertButton) {
         console.error('File upload elements are missing in the DOM.');
         return;
     }
@@ -5991,6 +6285,32 @@ function setupFileUpload() {
         alert('❌Error in computation. Please check your file format.');
     }
 });
+
+// Convert and Download button click event
+convertButton.addEventListener("click", () => {
+    if (!uploadedData) {
+      console.warn("⚠️ No file uploaded. Cannot proceed with conversion.");
+      alert("⚠️ Please upload a JSON file first.");
+      return;
+    }
+
+    try {
+      const parsedData = parseSerialized(uploadedData);
+
+      // Trigger download for parsed data
+      const blob = new Blob([JSON.stringify(parsedData, null, 2)], { type: 'application/json' });
+      const downloadLink = document.createElement('a');
+      downloadLink.href = URL.createObjectURL(blob);
+      downloadLink.download = 'parsedLattice.json';
+      downloadLink.click();
+      URL.revokeObjectURL(downloadLink.href);
+
+      console.log('✅ Parsed data downloaded successfully.');
+    } catch (error) {
+      console.error('❌ Error converting the file:', error);
+      alert('❌ Conversion failed. Please ensure the file format is correct.');
+    }
+  });
         /*const reader = new FileReader();
         reader.onload = (event) => {
             try {
@@ -6045,6 +6365,11 @@ function visualizeDataset(jsonData) {
      // Compute Superconcepts and Subconcepts first
      console.log("📌 Computing superconcepts and subconcepts...");
      computeSuperSubConcepts(jsonData);
+
+      // Assign layers to nodes
+      console.log("📌 Assigning layers...");
+      const layers = assignLayers(jsonData);
+      jsonData.layers = layers;
 
       // Compute reduced labels after ensuring relationships
       console.log("📌 Computing reduced labels...");   
