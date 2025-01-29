@@ -5,6 +5,7 @@ import { createLattice } from '../core/lattice.js';
 import { extractConceptsFromGraph, computeCanonicalBase } from '../core/canonicalBase.js';
 import { calculateMetrics } from '../core/metrics.js'; 
 import { setupFilterControls } from '../features/setupFilters.js';
+import { parseSerialized } from '../core/latticeParser.js';
 
 /**
  * Sets up file upload handling and triggers concept lattice generation upon user interaction.
@@ -19,6 +20,8 @@ export function setupFileUpload() {
     const loadButton = document.getElementById('load-json-file');
     const computeButton = document.getElementById('compute-canonical-base');
     const resultsContainer = document.getElementById('results');
+    const convertButton = document.getElementById("convert-and-download");
+
 
 
      // Debug: Log what elements exist
@@ -27,6 +30,7 @@ export function setupFileUpload() {
      console.log("📂 loadButton:", loadButton);
      console.log("📂 computeButton:", computeButton);
      console.log("📂 resultsContainer:", resultsContainer);
+     console.log("📂 convertButton:", convertButton);
 
      // Debug: Log elements
     console.log("🔍 Checking DOM elements before setup...", {
@@ -34,7 +38,7 @@ export function setupFileUpload() {
     });
 
     // Validate elements
-    if (!fileInput || !loadButton || !computeButton || !resultsContainer) {
+    if (!fileInput || !loadButton || !computeButton || !resultsContainer || !convertButton) {
         console.error('File upload elements are missing in the DOM.');
         return;
     }
@@ -144,6 +148,32 @@ export function setupFileUpload() {
         alert('❌Error in computation. Please check your file format.');
     }
 });
+
+// Convert and Download button click event
+convertButton.addEventListener("click", () => {
+    if (!uploadedData) {
+      console.warn("⚠️ No file uploaded. Cannot proceed with conversion.");
+      alert("⚠️ Please upload a JSON file first.");
+      return;
+    }
+
+    try {
+      const parsedData = parseSerialized(uploadedData);
+
+      // Trigger download for parsed data
+      const blob = new Blob([JSON.stringify(parsedData, null, 2)], { type: 'application/json' });
+      const downloadLink = document.createElement('a');
+      downloadLink.href = URL.createObjectURL(blob);
+      downloadLink.download = 'parsedLattice.json';
+      downloadLink.click();
+      URL.revokeObjectURL(downloadLink.href);
+
+      console.log('✅ Parsed data downloaded successfully.');
+    } catch (error) {
+      console.error('❌ Error converting the file:', error);
+      alert('❌ Conversion failed. Please ensure the file format is correct.');
+    }
+  });
         /*const reader = new FileReader();
         reader.onload = (event) => {
             try {
