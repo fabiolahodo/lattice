@@ -1,0 +1,32 @@
+{
+    "nodes": [
+    { "id": 1, "label": "Extent\n{T4}\nIntent{a, b, c}", "level":4 },
+    { "id": 2, "label": "Extent\n{T1, T2, T4, T6}\nIntent{b}", "level": 2 },
+    { "id": 3, "label": "Extent\n{T3, T4, T6}\nIntent{c}", "level": 2 },
+    { "id": 4, "label": "Extent\n{T1, T5}\nIntent{d}", "level": 2 },
+    { "id": 5, "label": "5Extent\n{T2, T7}\nIntent{e}", "level": 2 },
+    {"id":"Bottom Concept",  "label": "Extent\n{}\nIntent{a, b, c, d, e}", "level":5},
+    { "id": 7, "label": "Extent\n{T4, T6}\nIntent{b, c}", "level": 3 },
+    { "id": 8, "label": "Extent\n{T1}\nIntent{b, d}", "level": 3 },
+    { "id": 9, "label": "Extent\n{T2}\nIntent{b, e}", "level": 3},
+    { "id":"Top Concept","label": "Extent\n{T1, T2, T3, T4, T5, T6}\nIntent{} ", "level": 1}
+    
+  ],
+
+  "links": [
+    { "source": "Top Concept", "target": 2 },
+    { "source": "Top Concept", "target": 3 },
+    { "source": "Top Concept", "target": 4 },
+    { "source": "Top Concept", "target": 5 },
+    { "source": 2, "target": 7 },
+    { "source": 2, "target": 8 },
+    { "source": 2, "target": 9 },
+    { "source": 3, "target": 7 },
+    { "source": 7, "target": 1 },
+    { "source": 4, "target": 8 },
+    { "source": 5,"target": 9 },
+    { "source": 8, "target": "Bottom Concept"},
+    { "source": 9, "target": "Bottom Concept" },
+    { "source": 1, "target": "Bottom Concept" }
+    ]
+}
