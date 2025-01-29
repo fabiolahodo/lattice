@@ -10,6 +10,7 @@ import { calculateMetrics } from './metrics.js';
 import { computeCanonicalBase } from './canonicalBase.js';
 import { setupFilterControls } from '../features/setupFilters.js'; 
 import { computeReducedLabels } from './reducedLabeling.js';
+import { assignLayers, orderVerticesWithinLayers } from './layering.js';
 //import { exportAsJSON, exportAsPNG, exportAsCSV, exportAsPDF } from '../features/export.js';
 
 
@@ -148,6 +149,24 @@ export function createLattice(graphData, options = {}) {
   // ✅ Compute superconcepts and subconcepts before rendering
   computeSuperSubConcepts(graphData);
 
+  console.log("📌 Assigning layers using the Coffman-Graham Algorithm...");
+  const layers = assignLayers(graphData);
+  graphData.layers = layers; // Add layers to graphData
+  
+  // Set y-coordinates for nodes based on their assigned layers
+  const layerSpacing = height / (layers.length + 1);
+  layers.forEach((layer, layerIndex) => {
+      layer.forEach((node, nodeIndex) => {
+          node.y = layerIndex * layerSpacing; // Assign vertical spacing based on layer index
+          node.x = (nodeIndex + 1) * (width / (layer.length + 1)); // Horizontal spacing
+          node.layer = layerIndex; // Add layer information for constraints
+      });
+  });
+
+  // Order nodes within layers to minimize edge crossings
+  console.log("📌 Ordering nodes within layers...");
+  orderVerticesWithinLayers(layers, graphData);
+  
   // ✅ Compute reduced labels before rendering
   computeReducedLabels(graphData.nodes, graphData.links);
 
