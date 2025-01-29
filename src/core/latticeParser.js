@@ -1,12 +1,17 @@
-import fs from 'fs';
+// src/core/latticeParser.js
+
+/*import fs from 'fs';
 import path from 'path';
+*/
+// Check if running in a Node.js or browser environment
+const isNodeEnvironment = typeof window === "undefined";
 
 /**
  * Parses the SERIALIZED data into a format suitable for visualization.
  * @param {Object} serialized - The serialized lattice data.
  * @returns {Object} Parsed data with nodes and links.
  */
-function parseSerialized(serialized) {
+export function parseSerialized(serialized) {
     const objects = serialized.objects || [];
     const properties = serialized.properties || [];
     const context = serialized.context || [];
@@ -58,10 +63,91 @@ function parseSerialized(serialized) {
 }
 
 /**
+ * Load serialized data from a file (manual - Node.js or browser-based).
+ * @param {string|File} input - Path to the input file (Node.js) or File object (browser).
+ * @returns {Promise<Object>} Parsed data with nodes and links.
+ */
+export function loadSerializedFile(input) {
+    return new Promise((resolve, reject) => {
+        if (isNodeEnvironment) {
+            // Node.js environment
+            const fs = require("fs");
+            const path = require("path");
+
+            try {
+                if (!fs.existsSync(input)) {
+                    reject(`File not found: ${input}`);
+                    return;
+                }
+                const serializedData = JSON.parse(fs.readFileSync(input, "utf-8"));
+                const parsedData = parseSerialized(serializedData);
+                resolve(parsedData);
+            } catch (error) {
+                reject(`Error reading file in Node.js: ${error.message}`);
+            }
+        } else {
+            // Browser environment
+            const reader = new FileReader();
+
+            reader.onload = (event) => {
+                try {
+                    const serializedData = JSON.parse(event.target.result);
+                    const parsedData = parseSerialized(serializedData);
+                    resolve(parsedData);
+                } catch (error) {
+                    reject(`Error parsing file in browser: ${error.message}`);
+                }
+            };
+
+            reader.onerror = () => {
+                reject("Error reading the file in the browser.");
+            };
+
+            reader.readAsText(input); // File object from <input type="file">
+        }
+    });
+}
+
+/**
+ * Save parsed data to a file (manual - Node.js or browser-based).
+ * @param {Object} parsedData - The parsed data to save.
+ * @param {string} output - Path to the output file (Node.js) or file name (browser).
+ */
+export function saveParsedData(parsedData, output = "parsedLattice.json") {
+    if (isNodeEnvironment) {
+        // Node.js environment
+        const fs = require("fs");
+        const path = require("path");
+
+        try {
+            const outputDir = path.dirname(output);
+            if (!fs.existsSync(outputDir)) {
+                fs.mkdirSync(outputDir, { recursive: true });
+            }
+            fs.writeFileSync(output, JSON.stringify(parsedData, null, 2));
+            console.log(`Parsed data saved to: ${output}`);
+        } catch (error) {
+            console.error(`Error saving file in Node.js: ${error.message}`);
+        }
+    } else {
+        // Browser environment
+        const blob = new Blob([JSON.stringify(parsedData, null, 2)], { type: "application/json" });
+        const downloadLink = document.createElement("a");
+        downloadLink.href = URL.createObjectURL(blob);
+        downloadLink.download = output;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+}
+
+/*
+/**
  * Load serialized data from a file, parse it, and save the parsed output.
  * @param {string} inputFilePath - Path to the input file with serialized data.
  * @param {string} outputBasePath - Base path to save the parsed data.
  */
+/*
 function processSerializedFile(inputFilePath, outputBasePath) {
     // Ensure input file exists
     if (!fs.existsSync(inputFilePath)) {
@@ -94,3 +180,4 @@ const inputFilePath = path.join('input', 'bob-ros.json'); // Path to the input f
 const outputBasePath = 'data'; // Base path for the parsed output
 
 processSerializedFile(inputFilePath, outputBasePath);
+*/
