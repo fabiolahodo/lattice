@@ -46,6 +46,11 @@ function visualizeDataset(jsonData) {
      console.log("📌 Computing superconcepts and subconcepts...");
      computeSuperSubConcepts(jsonData);
 
+      // Assign layers to nodes
+      console.log("📌 Assigning layers...");
+      const layers = assignLayers(jsonData);
+      jsonData.layers = layers;
+
       // Compute reduced labels after ensuring relationships
       console.log("📌 Computing reduced labels...");   
       computeReducedLabels(jsonData.nodes, jsonData.links);
