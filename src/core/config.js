@@ -18,8 +18,8 @@ export const GRAPH_CONFIG = {
       color: '#ccc', // Default color for links
       thickness: 2, // Default thickness of links
       highlightedColor: 'red', // Color for highlighted links
-      minDistance: 50, // Minimum link distance
-      maxDistance: 200, // Maximum link distance for large graphs
+      minDistance: 30, // Minimum link distance
+      maxDistance: 150, // Maximum link distance for large graphs
       minThickness: 1, // Minimum thickness of links for better performance 
     },
     constraints: {
