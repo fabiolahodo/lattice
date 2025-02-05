@@ -2976,7 +2976,7 @@ function selection_transition(name) {
 selection.prototype.interrupt = selection_interrupt;
 selection.prototype.transition = selection_transition;
 
-function center(x, y) {
+function forceCenter(x, y) {
   var nodes, strength = 1;
 
   if (x == null) x = 0;
@@ -3442,7 +3442,7 @@ function y$1(d) {
   return d.y + d.vy;
 }
 
-function collide(radius) {
+function forceCollide(radius) {
   var nodes,
       radii,
       random,
@@ -3541,7 +3541,7 @@ function find(nodeById, nodeId) {
   return node;
 }
 
-function link(links) {
+function forceLink(links) {
   var id = index,
       strength = defaultStrength,
       strengths,
@@ -3809,7 +3809,7 @@ function simulation(nodes) {
   };
 }
 
-function manyBody() {
+function forceManyBody() {
   var nodes,
       node,
       random,
@@ -4452,8 +4452,8 @@ const GRAPH_CONFIG = {
       color: '#ccc', // Default color for links
       thickness: 2, // Default thickness of links
       highlightedColor: 'red', // Color for highlighted links
-      minDistance: 50, // Minimum link distance
-      maxDistance: 200, // Maximum link distance for large graphs
+      minDistance: 30, // Minimum link distance
+      maxDistance: 150, // Maximum link distance for large graphs
       minThickness: 1, // Minimum thickness of links for better performance 
     },
     constraints: {
@@ -4762,15 +4762,17 @@ function parseNodeLabel$1(node) {
  * @returns {string} - Formatted label string for visualization.
  */
 function formatLabel(extent, intent) {
-    const extentLabel = extent.length > 0 ? extent.join(", ") : ""; // Skip empty
-    const intentLabel = intent.length > 0 ? intent.join(", ") : ""; // Skip empty
+    const extentLabel = extent.length > 0 
+    ? extent.join(", ") : ""; // Skip empty
+    const intentLabel = intent.length > 0 
+    ? intent.join(", ") : ""; // Skip empty
 
     if (extentLabel && intentLabel) {
-        return `[Extent: ${extentLabel}] [Intent: ${intentLabel}]`;
+        return `[E: ${extentLabel}] [: ${intentLabel}]`;
     } else if (extentLabel) {
-        return `[Extent: ${extentLabel}]`;
+        return `[E: ${extentLabel}]`;
     } else if (intentLabel) {
-        return `[Intent: ${intentLabel}]`;
+        return `[I: ${intentLabel}]`;
     }
     return ""; // No label if both are empty
 }
@@ -5208,78 +5210,113 @@ function centerGraph(svg, { width, height, padding, bbox }) {
 // src/core/nodeMovement.js
 
 /**
- * Applies constraints to node positions.
+ * Applies movement constraints to node positions.
+ * Ensures nodes:
+ * - Stay inside the graph boundaries
+ * - Maintain proper vertical alignment within their assigned layers
+ * - Avoid overlapping with other nodes
+ * - Do not cross into other layers
  * @param {Object} graphData - The graph data containing nodes and links.
  * @param {number} width - Width of the graph area.
  * @param {number} height - Height of the graph area.
  */
-
 function applyNodeConstraints(graphData, width, height) {
-  const padding = GRAPH_CONFIG.dimensions.padding; // Use dynamic padding from config to maintain a gap between nodes
-  
-  /**
-   * Helper function to find nodes linked to a given node.
-   * @param {string} nodeId - The ID of the node to find linked nodes for.
-   * @returns {Array} - Array of linked nodes.
-   */
+    // ✅ Get padding from config to maintain consistent spacing
+    const padding = GRAPH_CONFIG.dimensions.padding;
 
-  function getLinkedNodes(nodeId) {
-    return graphData.links
-      .filter(link => link.source.id === nodeId || link.target.id === nodeId)
-      .map(link => (link.source.id === nodeId ? link.target : link.source));
-  }
+    // ✅ Compute layer spacing dynamically based on the total number of layers
+    const maxLevel = Math.max(...graphData.nodes.map(n => n.level)); // Find the deepest level
+    const layerSpacing = (height - 2 * padding) / (maxLevel + 1); // Distribute layers evenly
 
-  
-  // Apply constraints to nodes
-  graphData.nodes.forEach(node => {
-    if (node.id === 'Top Concept') {
-      // Constrain the 'Top Concept' to be at the top of the graph (fixed level)
-      node.y = Math.min(node.y, GRAPH_CONFIG.constraints.topY); // Keep it fixed at the top, for example, 50px away from the top
-    } else if (node.id === 'Bottom Concept') {
-      // Constrain the 'Bottom Concept' to be at the bottom of the graph (fixed level)
-      node.y = Math.max(node.y, height - GRAPH_CONFIG.constraints.bottomY); // Keep it fixed at the bottom, for example, 50px away from the bottom
-    } else {
-      /* For other nodes, constrain them based on the level
-      const topY = Math.min(...graphData.nodes.filter(n => n.id === 'Top Concept').map(n => n.y));
-      const bottomY = Math.max(...graphData.nodes.filter(n => n.id === 'Bottom Concept').map(n => n.y));
-      
-
-      // Ensure the y-coordinate of the node respects the level and does not exceed the bounds of top and bottom nodes
-      const levelPadding = 50;  // You can adjust the padding as needed
-      const minY = topY + (node.level - 1) * levelPadding;  // Calculate the minimum y-coordinate based on the level
-      const maxY = bottomY - (5 - node.level) * levelPadding; // Adjust this based on the maximum level (assuming 5 levels)
-      
-      node.y = Math.max(minY, Math.min(maxY, node.y)); // Keep node within the bounds defined by its level
-    
-    */
-      // Constrain inner nodes based on their neighbors
-      const linkedNodes = getLinkedNodes(node.id);
-
-      const upperNeighbors = linkedNodes.filter(n => n.level < node.level);
-      const lowerNeighbors = linkedNodes.filter(n => n.level > node.level);
-
-      // Calculate constraints based on neighbors
-      const topY = upperNeighbors.length > 0
-        ? Math.max(...upperNeighbors.map(n => n.y + padding)) // Ensure node stays below its upper neighbors
-        : 0; // No upper neighbors, fallback to the top of the graph
-      const bottomY = lowerNeighbors.length > 0
-        ? Math.min(...lowerNeighbors.map(n => n.y - padding)) // Ensure node stays above its lower neighbors
-        : height; // No lower neighbors, fallback to the bottom of the graph
-
-      // Constrain the node within these bounds
-      node.y = Math.max(topY, Math.min(bottomY, node.y));
-
+    /**
+     * Helper function to find nodes directly connected to a given node.
+     * @param {string} nodeId - The ID of the node to find linked nodes for.
+     * @returns {Array} - Array of linked nodes.
+     */
+    function getLinkedNodes(nodeId) {
+        return graphData.links
+            .filter(link => link.source.id === nodeId || link.target.id === nodeId) // Find links where this node is a source or target
+            .map(link => (link.source.id === nodeId ? link.target : link.source)); // Return the connected nodes
     }
 
-    // Ensure all nodes stay within the SVG bounds
-    node.x = Math.max(0, Math.min(width, node.x));
-    node.y = Math.max(0, Math.min(height, node.y));
-  });
- // Ensure all nodes stay within the SVG bounds (added after constraints logic)
- graphData.nodes.forEach((node) => {
-  node.x = Math.max(padding, Math.min(width - padding, node.x));
-  node.y = Math.max(padding, Math.min(height - padding, node.y));
-}); 
+    // ✅ Apply constraints to all nodes in the graph
+    graphData.nodes.forEach(node => {
+        if (node.id === 'Top Concept') {
+            // 🔹 Keep "Top Concept" fixed at the top
+            node.y = padding; // Strictly fix at top padding
+        } else if (node.id === 'Bottom Concept') {
+            // 🔹 Keep "Bottom Concept" fixed at the bottom
+            node.y = height - padding; // Strictly fix at bottom padding
+        } else {
+            // 🔹 Ensure node stays within its assigned layer
+            const layerY = padding + node.level * layerSpacing; // Compute base Y position for the layer
+            const verticalMargin = layerSpacing * 0.3; // Allow some minor movement within the layer
+
+            // 🔹 Ensure the node stays within its assigned layer boundaries
+            const minY = layerY - verticalMargin;
+            const maxY = layerY + verticalMargin;
+            
+            // Ensure the node stays within its assigned layer boundaries
+            node.y = Math.max(minY, Math.min(maxY, node.y));
+
+            // 🔹 Adjust y-position dynamically based on its linked neighbors
+            const linkedNodes = getLinkedNodes(node.id); // Find connected nodes
+            const upperNeighbors = linkedNodes.filter(n => n.level < node.level); // Nodes above this one
+            const lowerNeighbors = linkedNodes.filter(n => n.level > node.level); // Nodes below this one
+
+            // ✅ Compute new vertical positioning constraints based on linked neighbors
+            const topY = upperNeighbors.length > 0
+                ? Math.max(...upperNeighbors.map(n => n.y + padding)) // Ensures node stays below its upper neighbors
+                : minY; // Default to minY if no upper neighbors
+
+            const bottomY = lowerNeighbors.length > 0
+                ? Math.min(...lowerNeighbors.map(n => n.y - padding)) // Ensures node stays above its lower neighbors
+                : maxY; // Default to maxY if no lower neighbors
+
+            // ✅ Apply the computed constraints to prevent overlapping with neighbors
+            node.y = Math.max(topY, Math.min(bottomY, node.y));
+        }
+
+        // ✅ Ensure nodes stay within the graph's horizontal & vertical boundaries
+        node.x = Math.max(padding, Math.min(width - padding, node.x)); // Keeps nodes inside left-right bounds
+        node.y = Math.max(padding, Math.min(height - padding, node.y)); // Keeps nodes inside top-bottom bounds
+    });
+
+    // ✅ Apply an additional step to prevent nodes from overlapping
+    preventNodeOverlap(graphData);
+}
+
+/**
+ * Prevents nodes from overlapping by applying a simple repulsion force.
+ * Ensures:
+ * - Nodes do not get too close to each other
+ * - Labels and nodes do not collide
+ * - Maintains better readability of the graph
+ * @param {Object} graphData - The graph data containing nodes.
+ */
+function preventNodeOverlap(graphData) {
+    const minDistance = GRAPH_CONFIG.node.maxRadius * 2; // ✅ Defines the minimum spacing between nodes
+
+    graphData.nodes.forEach((nodeA) => {
+        graphData.nodes.forEach((nodeB) => {
+            if (nodeA !== nodeB) { // ✅ Only compare different nodes
+                const dx = nodeA.x - nodeB.x;
+                const dy = nodeA.y - nodeB.y;
+                const distance = Math.sqrt(dx * dx + dy * dy); // Compute Euclidean distance between nodes
+
+                if (distance < minDistance) { // If nodes are too close
+                    const angle = Math.atan2(dy, dx); // Find the angle between the nodes
+                    const moveAmount = (minDistance - distance) / 2; // Compute how much they need to be moved apart
+
+                    // ✅ Move both nodes apart by a small amount
+                    nodeA.x += Math.cos(angle) * moveAmount;
+                    nodeA.y += Math.sin(angle) * moveAmount;
+                    nodeB.x -= Math.cos(angle) * moveAmount;
+                    nodeB.y -= Math.sin(angle) * moveAmount;
+                }
+            }
+        });
+    });
 }
 
 // src/core/simulation.js
@@ -5296,74 +5333,57 @@ function applyNodeConstraints(graphData, width, height) {
 
 function createSimulation(graphData, linkGroup, nodeGroup, labelGroup, options) {
   const { width, height } = { ...GRAPH_CONFIG.dimensions, ...options };
+  const padding = GRAPH_CONFIG.dimensions.padding;
 
-  /* Initialize node positions if undefined
-  graphData.nodes.forEach(node => {
-    if (node.x === undefined) node.x = width / 2;
-    if (node.y === undefined) node.y = height / 2;
-  });
-*/
 // Initialize node positions if not already set
-const layerSpacing = height / ((graphData.layers.length | 1) + 1);
+const layerSpacing = (height - 2 * padding) / ((graphData.layers.length || 1) + 1);
  graphData.nodes.forEach((node) => {
         node.x = node.x || width / 2;
-        node.y = node.y || (node.layer !== undefined ? node.layer * layerSpacing : height / 2);
-    });
-  /* Dynamically calculate max link distance based on dataset size and canvas dimensions
-  const baseDistance = Math.min(width, height) / 5; // A baseline distance proportional to the canvas size
-  const dynamicDistance = (baseDistance / Math.sqrt(graphData.nodes.length)) * 2; // Adjust based on node count
+        node.y = node.y || (node.layer !== undefined ? padding + node.layer * layerSpacing : height / 2);
+    }); 
 
-  const linkDistance = d => {
-    const levelDiff = Math.abs(d.source.level - d.target.level); // Level difference between nodes
-    return Math.max(dynamicDistance / (levelDiff + 1), 50); // Ensure minimum distance of 50
-  };
+/* Ensure node positions are assigned ONLY if they are undefined
+graphData.nodes.forEach((node) => {
+  if (node.x === undefined) node.x = width / 2; // Default center horizontally
+  if (node.y === undefined) node.y = height / 2; // Default center vertically
+});
 */
-
 //Dynamically adjust force parameters
 const baseDistance = Math.min(width, height) / 5; // Base distance relative to canvas size
 const dynamicLinkDistance = Math.max(
   GRAPH_CONFIG.link.minDistance, 
   baseDistance / Math.sqrt(graphData.nodes.length)); // Link distance scales with node count
-//const collisionRadius = dynamicLinkDistance * GRAPH_CONFIG.simulation.collisionFactor; // Collision radius relative to link distance
-//const chargeStrength = -dynamicLinkDistance * GRAPH_CONFIG.simulation.chargeFactor; // Dynamic charge/repulsion strength
+
 const collisionRadius = Math.max(30, dynamicLinkDistance * GRAPH_CONFIG.simulation.collisionFactor); // Increased collision radius
 const chargeStrength = Math.min(-100, -dynamicLinkDistance * GRAPH_CONFIG.simulation.chargeFactor); // Stronger repulsion for larger graphs
 
   const simulation$1 = simulation(graphData.nodes)
-    /*.force('link', d3.forceLink(graphData.links).id(d => d.id).distance(150))
-    .force('charge', forceManyBody().strength(-500)) // Stronger repulsion
-    .force('collision', d3.forceCollide().radius(40)) // Add collision force with radius slightly larger than node size
-    //.force('center', d3.forceCenter(0, 0)) // Center at (0, 0)
-    .force('center', d3.forceCenter(width / 2, height / 2)) // Center the graph
-    */
-    .force('link', link(graphData.links).id(d => d.id).distance(dynamicLinkDistance)) // Dynamic link distance
-    .force('charge', manyBody().strength(chargeStrength)) // Adjust repulsion dynamically
-    .force('collision', collide().radius(collisionRadius)) // Dynamic collision radius
-    .force('center', center(width / 2, height / 2)) // Center graph
+    .force('link', forceLink(graphData.links).id(d => d.id).distance(dynamicLinkDistance)) // Dynamic link distance
+    .force('charge', forceManyBody().strength(chargeStrength)) // Adjust repulsion dynamically
+    .force('collision', forceCollide().radius(collisionRadius)) // Dynamic collision radius
+    .force('center', forceCenter(width / 2, height / 2)) // Center graph
     .on('tick', () => {
       // Update positions dynamically on every tick
+
        // Update link positions
       linkGroup
-        .attr('x1', d => d.source.x)
-        .attr('y1', d => d.source.y)
-        .attr('x2', d => d.target.x)
-        .attr('y2', d => d.target.y);
+        .attr('x1', (d) => d.source.x)
+        .attr('y1', (d) => d.source.y)
+        .attr('x2', (d) => d.target.x)
+        .attr('y2', (d) => d.target.y);
       // Update node positions
       nodeGroup
-        .attr('cx', d => d.x)
-        .attr('cy', d => d.y);
-  /*
-      svg.selectAll('text')
-        .attr('x', d => d.x)
-        .attr('y', d => d.y); */
+        .attr('cx', (d) => d.x)
+        .attr('cy', (d) => d.y);
       
       // Update label positions dynamically
       labelGroup
-        .attr('x', d => d.x)
-        .attr('y', d => d.y + GRAPH_CONFIG.node.labelOffset); // Adjust below the node
+        .attr('x', (d)=> d.x)
+        .attr('y', (d) => d.y + GRAPH_CONFIG.node.labelOffset); // Adjust below the node
     
       // Apply node constraints
       applyNodeConstraints(graphData, width, height);
+      preventNodeOverlap(graphData); // Ensure nodes don't overlap
 
       // Debug: Log positions of first few nodes and links
   if (graphData.nodes.length > 0) {
@@ -5718,8 +5738,9 @@ function setupFilterControls(originalGraphData) {
 // src/core/layering.js
 
 /**
- * Assigns nodes to hierarchical layers using the provided `level` property.
- * Ensures all dependencies are satisfied while placing nodes in appropriate layers.
+ * Assigns nodes to hierarchical layers.
+ * Use predefined `level` values from the JSON if available.
+ * If no levels exist, it computes layers dynamically using the Coffman-Graham algorithm.
  * @param {Object} graphData - The graph data containing nodes and links.
  * @returns {Array} - An array of layers, each containing nodes.
  * @throws {Error} - If the graph data is invalid or malformed.
@@ -5730,28 +5751,103 @@ function assignLayers$1(graphData) {
     }
 
     const layers = [];
-    const width = 800; // Canvas width (adjustable)
-    const height = 600; // Canvas height (adjustable)
-    const layerSpacing = height / 10; // Vertical spacing between layers
+    const width = GRAPH_CONFIG.dimensions.width; // Canvas width (adjustable)
+    const height = GRAPH_CONFIG.dimensions.height; // Canvas height (adjustable)
+    const padding = GRAPH_CONFIG.dimensions.padding;
+    //const layerSpacing = height / 10; // Vertical spacing between layers
+
+    // Check if all nodes have a `level` property (predefined layering)
+    const usePredefinedLevels = graphData.nodes.every(node => node.hasOwnProperty("level"));
+
+    if (usePredefinedLevels) {
+        console.log("✅ Using predefined levels from JSON...");
+
+        // Calculate spacing dynamically based on the highest level in the dataset
+        const maxLevel = Math.max(...graphData.nodes.map(n => n.level));
+        const layerSpacing = (height - 2 * padding) / (maxLevel + 1);
 
     // Group nodes by their `level` property
     graphData.nodes.forEach((node) => {
-        const layer = node.level - 1; // Level 1 corresponds to layer 0
-        if (!layers[layer]) layers[layer] = [];
-        layers[layer].push(node);
+        const layerIndex = node.level - 1; // Level 1 corresponds to layer 0
+        if (!layers[layerIndex]) layers[layerIndex] = [];
+        layers[layerIndex].push(node);
 
-        // Assign initial x and y positions for the node
-        node.y = layer * layerSpacing; // Vertical spacing based on layer index
-        node.x = layers[layer].length * (width / (layers[layer].length + 1)); // Horizontal spacing within the layer
+        // Assign initial y position for the node
+        node.y = padding + layerIndex * layerSpacing; // Vertical spacing based on layer index
     });
+   
+} else {
+    console.log("⚠️ No predefined levels detected. Computing layers using Coffman-Graham algorithm...");
+
+    // Compute layers dynamically using the Coffman-Graham algorithm
+    return computeCoffmanGrahamLayers(graphData);
+}
+
+// Evenly distribute nodes within each layer (improves horizontal alignment)
+layers.forEach((layer) => {
+    const xSpacing = (width - 2 * padding) / (layer.length + 1);
+    layer.forEach((node, index) => {
+        node.x = padding + (index + 1) * xSpacing; // Distribute evenly with padding
+    });
+});
 
     console.debug(
         "Layers Assigned:",
         layers.map((layer, index) => ({
+            layer: index + 1, // Converts zero-based index to 1-based layer number for readability
+            nodes: layer.map((node) => node.id),
+        }))
+    );
+
+    return layers;
+}
+
+/**
+ * Computes hierarchical layers dynamically using the Coffman-Graham algorithm.
+ * This method is used if nodes do not have predefined `level` values.
+ * @param {Object} graphData - The graph data containing nodes and links.
+ * @returns {Array} - The computed layers using the Coffman-Graham algorithm.
+ */
+function computeCoffmanGrahamLayers(graphData) {
+    const layers = [];
+    const height = GRAPH_CONFIG.dimensions.height; // Canvas height
+    const nodeQueue = [...graphData.nodes]; // Copy nodes for processing
+    const placedNodes = new Set();
+
+    // Sort nodes by decreasing number of dependencies (Coffman-Graham approach)
+    nodeQueue.sort((a, b) => b.superconcepts.length - a.superconcepts.length);
+
+    nodeQueue.forEach((node) => {
+        let layer = 0;
+
+        // Find the first available layer where all dependencies are placed
+        while (layer < layers.length) {
+            const dependenciesMet = node.superconcepts.every((parent) =>
+                layers[layer].some((layerNode) => layerNode.id === parent.id)
+            );
+
+            if (dependenciesMet) break;
+            layer++;
+        }
+
+        // Place the node in the correct layer
+        if (!layers[layer]) layers[layer] = [];
+        layers[layer].push(node);
+        placedNodes.add(node.id);
+
+        // Compute spacing
+        const layerSpacing = height / (layers.length + 1);
+        node.y = layer * layerSpacing;
+    });
+
+    console.debug(
+        "Computed Layers (Coffman-Graham):",
+        layers.map((layer, index) => ({
             layer: index + 1,
             nodes: layer.map((node) => node.id),
         }))
-    ); // Debug log for layer assignment
+    );
+
     return layers;
 }
 
@@ -5769,13 +5865,28 @@ function orderVerticesWithinLayers(layers, graphData) {
         throw new Error("Invalid graph data: 'nodes' must be an array.");
     }
 
+    //const width = 800; // Canvas width for horizontal positioning
+
     layers.forEach((layer) => {
-        layer.sort((a, b) =>
-            computeBarycenter(a, graphData) - computeBarycenter(b, graphData)
-        );
+        // Compute barycenters for nodes in the current layer
+        layer.forEach((node) => {
+            node.barycenter = computeBarycenter(node, graphData);
+        });
+
+        // Sort nodes within the layer by their barycenter
+        layer.sort((a, b) => a.barycenter - b.barycenter);
+
+        // ✅ Recompute **x-coordinates** after sorting for **better alignment**
+        const layerWidth = GRAPH_CONFIG.dimensions.width - 2 * GRAPH_CONFIG.dimensions.padding;
+        const xSpacing = layerWidth / (layer.length + 1);
+
+        // Reassign x positions for evenly spaced nodes after sorting
+        layer.forEach((node, index) => {
+            node.x = GRAPH_CONFIG.dimensions.padding + (index + 1) * xSpacing; // Horizontal spacing
+        });
     });
 
-    console.debug("Vertices Ordered Within Layers");
+    console.debug("Nodes Ordered Within Layers");
 }
 
 /**
@@ -5787,12 +5898,19 @@ function orderVerticesWithinLayers(layers, graphData) {
  */
 function computeBarycenter(node, graphData) {
     const neighbors = [...node.superconcepts, ...node.subconcepts];
-    const neighborPositions = neighbors.map((neighbor) => {
-        const neighborNode = graphData.nodes.find((n) => n.id === neighbor.id);
-        return neighborNode ? neighborNode.x : 0; // Default to 0 if neighbor not found
-    });
 
-    if (neighborPositions.length === 0) return 0; // No neighbors, return 0
+    // Map neighbors to their x positions
+    const neighborPositions = neighbors
+        .map((neighbor) => {
+            const neighborNode = graphData.nodes.find((n) => n.id === neighbor.id);
+            return neighborNode ? neighborNode.x : undefined; // Undefined if not found
+        })
+        .filter((x) => x !== undefined); // Filter out undefined values
+
+    // Return 0 if no valid neighbors
+    if (neighborPositions.length === 0) return 0;
+
+    // Compute and return average x position (barycenter)
     return neighborPositions.reduce((sum, x) => sum + x, 0) / neighborPositions.length;
 }
 
@@ -5845,6 +5963,21 @@ function createLattice(graphData, options = {}) {
           node.layer = layerIndex; // Add layer information for constraints
       });
   });
+
+   /* Adjust top and bottom concepts to be centered horizontally
+  const topConcept = graphData.nodes.find((node) => node.superconcepts.length === 0);
+  const bottomConcept = graphData.nodes.find((node) => node.subconcepts.length === 0);
+
+  if (topConcept) {
+      topConcept.x = width / 2;
+      console.log("📌 Top concept positioned at center:", topConcept.id);
+  }
+
+  if (bottomConcept) {
+      bottomConcept.x = width / 2;
+      console.log("📌 Bottom concept positioned at center:", bottomConcept.id);
+  }
+*/
 
   // Order nodes within layers to minimize edge crossings
   console.log("📌 Ordering nodes within layers...");
@@ -6047,13 +6180,15 @@ function filterLattice(graphData, filterCriteria) {
 
 /**
  * Parses the SERIALIZED data into a format suitable for visualization.
+ * Converts serialized lattice data into `nodes` and `links` with labels, levels, and all neighbor links.
+ * 
  * @param {Object} serialized - The serialized lattice data.
  * @returns {Object} Parsed data with nodes and links.
  */
 function parseSerialized(serialized) {
     const objects = serialized.objects || [];
     const properties = serialized.properties || [];
-    serialized.context || [];
+    const context = serialized.context || [];
     const lattice = serialized.lattice || [];
 
     // Helper to create labels for nodes
@@ -6065,11 +6200,12 @@ function parseSerialized(serialized) {
 
     // Parse nodes
     const nodes = lattice.map((latticeNode, index) => {
-        const [extents, intents] = latticeNode;
+        const [extents, intents, upperNeighbors] = latticeNode;
         const label = createLabel(extents, intents);
-        const level = latticeNode[2]?.length || 0; // Use the size of upper neighbors as the level
+        //const level = latticeNode[2]?.length || 0; // Use the size of upper neighbors as the level
+        const level = upperNeighbors.length; // Use the number of upper neighbors to calculate the level
         return {
-            id: index, // Unique ID for the node
+            id: index + 1, // Unique ID for the node starting from 1
             label,
             level,
         };
@@ -6083,22 +6219,22 @@ function parseSerialized(serialized) {
         // Add links to upper neighbors
         upperNeighbors.forEach((upperIndex) => {
             links.push({
-                source: sourceIndex,
-                target: upperIndex,
+                source: sourceIndex + 1, // Adjust for 1-based indexing
+                target: upperIndex + 1, // Adjust for 1-based indexing
             });
         });
 
         // Add links to lower neighbors
         lowerNeighbors.forEach((lowerIndex) => {
             links.push({
-                source: lowerIndex,
-                target: sourceIndex,
+                source: lowerIndex + 1, // Adjust for 1-based indexing
+                target: sourceIndex + 1, // Adjust for 1-based indexing
             });
         });
     });
 
     // Return parsed data
-    return { nodes, links };
+    return { nodes, links, context };
 }
 
 /*
