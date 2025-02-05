@@ -9,7 +9,7 @@ import { GRAPH_CONFIG } from './config.js';
 import { calculateMetrics } from './metrics.js';
 import { computeCanonicalBase } from './canonicalBase.js';
 import { setupFilterControls } from '../features/setupFilters.js'; 
-import { computeReducedLabels } from './reducedLabeling.js';
+import { computeReducedLabels, formatLabel } from './reducedLabeling.js';
 import { assignLayers, orderVerticesWithinLayers } from './layering.js';
 //import { exportAsJSON, exportAsPNG, exportAsCSV, exportAsPDF } from '../features/export.js';
 
@@ -162,6 +162,21 @@ export function createLattice(graphData, options = {}) {
           node.layer = layerIndex; // Add layer information for constraints
       });
   });
+
+   /* Adjust top and bottom concepts to be centered horizontally
+  const topConcept = graphData.nodes.find((node) => node.superconcepts.length === 0);
+  const bottomConcept = graphData.nodes.find((node) => node.subconcepts.length === 0);
+
+  if (topConcept) {
+      topConcept.x = width / 2;
+      console.log("📌 Top concept positioned at center:", topConcept.id);
+  }
+
+  if (bottomConcept) {
+      bottomConcept.x = width / 2;
+      console.log("📌 Bottom concept positioned at center:", bottomConcept.id);
+  }
+*/
 
   // Order nodes within layers to minimize edge crossings
   console.log("📌 Ordering nodes within layers...");
