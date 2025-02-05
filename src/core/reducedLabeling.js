@@ -31,15 +31,17 @@ function parseNodeLabel(node) {
  * @returns {string} - Formatted label string for visualization.
  */
 export function formatLabel(extent, intent) {
-    const extentLabel = extent.length > 0 ? extent.join(", ") : ""; // Skip empty
-    const intentLabel = intent.length > 0 ? intent.join(", ") : ""; // Skip empty
+    const extentLabel = extent.length > 0 
+    ? extent.join(", ") : ""; // Skip empty
+    const intentLabel = intent.length > 0 
+    ? intent.join(", ") : ""; // Skip empty
 
     if (extentLabel && intentLabel) {
-        return `[Extent: ${extentLabel}] [Intent: ${intentLabel}]`;
+        return `[E: ${extentLabel}] [: ${intentLabel}]`;
     } else if (extentLabel) {
-        return `[Extent: ${extentLabel}]`;
+        return `[E: ${extentLabel}]`;
     } else if (intentLabel) {
-        return `[Intent: ${intentLabel}]`;
+        return `[I: ${intentLabel}]`;
     }
     return ""; // No label if both are empty
 }
