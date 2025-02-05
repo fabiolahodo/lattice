@@ -8,6 +8,8 @@ const isNodeEnvironment = typeof window === "undefined";
 
 /**
  * Parses the SERIALIZED data into a format suitable for visualization.
+ * Converts serialized lattice data into `nodes` and `links` with labels, levels, and all neighbor links.
+ * 
  * @param {Object} serialized - The serialized lattice data.
  * @returns {Object} Parsed data with nodes and links.
  */
@@ -26,11 +28,12 @@ export function parseSerialized(serialized) {
 
     // Parse nodes
     const nodes = lattice.map((latticeNode, index) => {
-        const [extents, intents] = latticeNode;
+        const [extents, intents, upperNeighbors] = latticeNode;
         const label = createLabel(extents, intents);
-        const level = latticeNode[2]?.length || 0; // Use the size of upper neighbors as the level
+        //const level = latticeNode[2]?.length || 0; // Use the size of upper neighbors as the level
+        const level = upperNeighbors.length; // Use the number of upper neighbors to calculate the level
         return {
-            id: index, // Unique ID for the node
+            id: index + 1, // Unique ID for the node starting from 1
             label,
             level,
         };
@@ -44,22 +47,22 @@ export function parseSerialized(serialized) {
         // Add links to upper neighbors
         upperNeighbors.forEach((upperIndex) => {
             links.push({
-                source: sourceIndex,
-                target: upperIndex,
+                source: sourceIndex + 1, // Adjust for 1-based indexing
+                target: upperIndex + 1, // Adjust for 1-based indexing
             });
         });
 
         // Add links to lower neighbors
         lowerNeighbors.forEach((lowerIndex) => {
             links.push({
-                source: lowerIndex,
-                target: sourceIndex,
+                source: lowerIndex + 1, // Adjust for 1-based indexing
+                target: sourceIndex + 1, // Adjust for 1-based indexing
             });
         });
     });
 
     // Return parsed data
-    return { nodes, links };
+    return { nodes, links, context };
 }
 
 /**
