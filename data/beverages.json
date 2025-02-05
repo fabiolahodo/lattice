@@ -1,0 +1,35 @@
+{
+    "nodes": [
+      { "id": 1, "label": "Extent\n{Champagne, Beer, Mineral Water, Cola, Coffee, Wine, Herbal Tea}\nIntent{Beverage}", "level": 1 },
+      { "id": 2, "label": "Extent\n{Mineral Water, Cola, Coffee, Herbal Tea}\nIntent{Non-Alcoholic}", "level": 2 },
+      { "id": 3, "label": "Extent\n{Mineral Water, Cola}\nIntent{Sparkling}", "level": 2 },
+      { "id": 4, "label": "Extent\n{Champagne, Beer, Wine}\nIntent{Alcoholic}", "level": 2 },
+      { "id": 5, "label": "Extent\n{Herbal Tea, Coffee}\nIntent{Non-Alcoholic, Hot}", "level": 3 },
+      { "id": 6, "label": "Extent\n{Cola, Coffee }\nIntent{Non-Alcoholic, Caffeinic }", "level": 3 },
+      { "id": 7, "label": "Extent\n{Mineral Water, Cola}\nIntent{Non-Alcoholic, Sparkling}", "level": 3 },
+      { "id": 8, "label": "Extent\n{Champagne, Beer,}\nIntent{Alcoholic, Sparkling}", "level": 3 },
+      { "id": 9, "label": "Extent\n{Coffee}\nIntent{Non-Alcoholic, Caffeinic, Hot}", "level": 4 },
+      { "id": 10, "label": "Extent\n{Cola}\nIntent{Non-Alcoholic, Caffeinic, Sparkling}", "level": 4 },
+      { "id": 11, "label": "Extent\n{}\nIntent{Beverage, Sparkling, Alcoholic, Non-Alcoholic, Caffeinic, Hot}", "level": 5 }
+    ],
+  
+    "links": [
+      { "source": 1, "target": 2 },
+      { "source": 1, "target": 3 },
+      { "source": 1, "target": 4 },
+      { "source": 2, "target": 5 },
+      { "source": 2, "target": 6 },
+      { "source": 2, "target": 7 },
+      { "source": 3, "target": 7 },
+      { "source": 3, "target": 8 },
+      { "source": 4, "target": 8 },
+      { "source": 5, "target": 9 },
+      { "source": 6, "target": 9 },
+      { "source": 6, "target": 10 },
+      { "source": 7, "target": 10 },
+      { "source": 8, "target": 11 },
+      { "source": 9, "target": 11 },
+      { "source": 10, "target": 11 }
+    ]
+  }
+  

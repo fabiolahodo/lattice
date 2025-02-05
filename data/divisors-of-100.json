@@ -1,0 +1,29 @@
+{
+    "nodes": [
+      { "id": 1, "label": "Extent\n{1, 2, 4, 5, 10, 20, 25, 50, 100}\nIntent{100}", "level": 1 },
+      { "id": 2, "label": "Extent\n{1,2,4,5,10,20}\nIntent{20, 100}", "level": 2 },
+      { "id": 3, "label": "Extent\n{1, 2, 5, 10, 25 }\nIntent{50, 100}", "level": 2 },
+      { "id": 4, "label": "Extent\n{1, 2, 4}\nIntent{4, 20, 100}", "level": 3 },
+      { "id": 5, "label": "Extent\n{1, 2, 5, 10}\nIntent{10, 20, 50, 100}", "level": 3 },
+      { "id": 6, "label": "Extent\n{1, 5, 25}\nIntent{25, 50, 100}", "level": 3 },
+      { "id": 7, "label": "Extent\n{1, 2}\nIntent{2, 4, 10, 20, 50, 100}", "level": 4 },
+      { "id": 8, "label": "Extent\n{1, 5}\nIntent{ 5, 10, 20, 25, 50, 100}", "level": 4 },
+      { "id": 9, "label": "Extent\n{1}\nIntent{1}", "level": 5 }
+    ],
+  
+    "links": [
+      { "source": 1, "target": 2 },
+      { "source": 1, "target": 3 },
+      { "source": 2, "target": 4 },
+      { "source": 2, "target": 5 },
+      { "source": 3, "target": 5 },
+      { "source": 3, "target": 6 },
+      { "source": 4, "target": 7 },
+      { "source": 5, "target": 7 },
+      { "source": 5, "target": 8 },
+      { "source": 6, "target": 8 },
+      { "source": 7, "target": 9 },
+      { "source": 8, "target": 9 }
+    ]
+  }
+  

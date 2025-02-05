@@ -1,0 +1,48 @@
+{
+    "nodes": [
+      { "id": 1, "label": "Extent\n{hyggelig snill, god, velsmakende, skarp yndig, skjonn, flink, pen}\nIntent{}", "level": 1 },
+      { "id": 2, "label": "Extent\n{hyggelig snill, god, velsmakende, flink}\nIntent{good}", "level": 2 },
+      { "id": 3, "label": "Extent\n{hyggelig snill, god, velsmakende}\nIntent{good, nice}", "level": 3 },
+      { "id": 4, "label": "Extent\n{god, flink, skarp yndig}\nIntent{clever}", "level": 2 },
+      { "id": 5, "label": "Extent\n{flink, skarp yndig, pen}\nIntent{cute}", "level": 2 },
+      { "id": 6, "label": "Extent\n{pen, skjonn}\nIntent{pretty}", "level": 2 },
+      { "id": 7, "label": "Extent\n{hyggelig snill, god}\nIntent{good, nice, kind}", "level": 4 },
+      { "id": 8, "label": "Extent\n{god, velsmakende}\nIntent{good, nice, delicious}", "level": 4 },
+      { "id": 9, "label": "Extent\n{god, flink}\nIntent{good, clever}", "level": 3 },
+      { "id": 10, "label": "Extent\n{flink, skarp yndig}\nIntent{clever, cute, sharp}", "level": 3 },
+      { "id": 11, "label": "Extent\n{pen}\nIntent{cute, pretty}", "level": 3 },
+      { "id": 12, "label": "Extent\n{pen, skjonn}\nIntent{pretty, beautiful}", "level": 3 },
+      { "id": 13, "label": "Extent\n{god}\nIntent{good, nice, delicious, clever}", "level": 5 },
+      { "id": 14, "label": "Extent\n{flink}\nIntent{clever, cute, sharp}", "level": 4 },
+      { "id": 15, "label": "Extent\n{pen}\nIntent{cute, pretty, beautiful}", "level": 4 },
+      { "id": 16, "label": "Extent\n{}\nIntent{good, nice, kind, delicious, clever, cute, sharp, pretty, beautiful}", "level": 6 }
+    ],
+  
+    "links": [
+      { "source": 1, "target": 2 },
+      { "source": 1, "target": 4 },
+      { "source": 1, "target": 5 },
+      { "source": 1, "target": 6 },
+      { "source": 2, "target": 3 },
+      { "source": 2, "target": 9 },
+      { "source": 3, "target": 7 },
+      { "source": 3, "target": 8 },
+      { "source": 4, "target": 9 },
+      { "source": 4, "target": 10 },
+      { "source": 5, "target": 10 },
+      { "source": 5, "target": 11 },
+      { "source": 6, "target": 11 },
+      { "source": 6, "target": 12 },
+      { "source": 7, "target": 13 },
+      { "source": 8, "target": 13 },
+      { "source": 9, "target": 13 },
+      { "source": 9, "target": 14 },
+      { "source": 10, "target": 14 },
+      { "source": 11, "target": 15 },
+      { "source": 12, "target": 15 },
+      { "source": 13, "target": 16 },
+      { "source": 14, "target": 16 },
+      { "source": 15, "target": 16 }
+    ]
+  }
+  
