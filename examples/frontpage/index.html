@@ -227,6 +227,17 @@
     #convert-and-download:hover {
       background-color: #218838; /* For Convert and Download */
     }
+    /* Styling for Extent (Objects) */
+.extent-label {
+  color: blue;         /* Blue color for extent */
+  font-weight: bold;   /* Make it bold */
+}
+
+/* Styling for Intent (Attributes) */
+.intent-label {
+  color: green;        /* Green color for intent */
+  font-style: italic;  /* Make it italic */
+}
       
   </style>
 </head>
@@ -479,6 +490,46 @@
   <!-- Link to the JavaScript module -->
   <!-- Include JavaScript -->
   <!--<script type="module" src="../../dist/bundle.js" data-dataset="../../data/live-in-water.json"></script>-->
-  <script type="module" src="../../dist/bundle.js"></script>
+  <script type="module" src="../../dist/bundle.js">
+    import { createLattice } from './lattice.js';
+
+    // Event listener for the Load JSON File button
+    document.getElementById('load-json-file').addEventListener('click', async () => {
+      const fileInput = document.getElementById('file-upload');
+      if (fileInput.files.length === 0) {
+        alert('Please select a file.');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = async function (event) {
+        try {
+          const graphData = JSON.parse(event.target.result);
+
+          // Validate the graph data
+          if (!graphData || !graphData.nodes || !graphData.links) {
+            alert('Invalid JSON structure. Please upload a valid file.');
+            return;
+          }
+
+          // Call the createLattice function to visualize the graph
+          createLattice(graphData, {
+            container: '#graph-container', // The container ID for the graph
+            width: 800,                    // Set the graph width
+            height: 600                    // Set the graph height
+          });
+
+          console.log('Lattice visualization created successfully!');
+        } catch (error) {
+          console.error('Error loading the file:', error);
+          alert('Failed to parse the file. Ensure it is a valid JSON.');
+        }
+      };
+
+      reader.readAsText(file);
+    });
+  </script>
 </body>
 </html>
