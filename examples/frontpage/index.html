@@ -238,7 +238,13 @@
   color: green;        /* Green color for intent */
   font-style: italic;  /* Make it italic */
 }
-      
+
+.link {
+  stroke: black; /* Ensure links are visible */
+  stroke-width: 2px;
+  opacity: 1;
+}
+
   </style>
 </head>
 <body>
@@ -448,6 +454,7 @@
       <div>
         <label for="save-as"><strong>Save as:</strong></label>
         <select id="save-as">
+          <option >Select the format</option>
           <option value="export-json">JSON</option>
           <option value="export-png">PNG</option>
           <option value="export-csv">CSV</option>
@@ -490,6 +497,8 @@
   <!-- Link to the JavaScript module -->
   <!-- Include JavaScript -->
   <!--<script type="module" src="../../dist/bundle.js" data-dataset="../../data/live-in-water.json"></script>-->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script type="module" src="./fileUpload.js"></script>
   <script type="module" src="../../dist/bundle.js">
     import { createLattice } from './lattice.js';
 
@@ -531,5 +540,14 @@
       reader.readAsText(file);
     });
   </script>
+
+  <!-- Ensure setupFileUpload runs after DOM is loaded -->
+<script type="module">
+  import { setupFileUpload } from './fileUpload.js';
+
+  document.addEventListener("DOMContentLoaded", () => {
+    setupFileUpload();
+  });
+</script>
 </body>
 </html>
