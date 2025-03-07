@@ -3,30 +3,85 @@
 // Import dependencies
 import * as d3 from 'd3';
 import { renderGraph, centerGraph  } from './rendering.js';
-import { createSimulation } from './simulation.js';
-import { addInteractivity, addNodeInteractivity, computeSuperSubConcepts } from './interactivity.js';
+//import { createSimulation } from './simulation.js';
+import { addInteractivity, addNodeInteractivity, computeSuperSubConcepts, updateLinks } from './interactivity.js';
 import { GRAPH_CONFIG } from './config.js'; 
 import { calculateMetrics } from './metrics.js';
 import { computeCanonicalBase } from './canonicalBase.js';
 import { setupFilterControls } from '../features/setupFilters.js'; 
 import { computeReducedLabels, formatLabel } from './reducedLabeling.js';
 import { assignLayers, orderVerticesWithinLayers } from './layering.js';
-//import { exportAsJSON, exportAsPNG, exportAsCSV, exportAsPDF } from '../features/export.js';
+import { exportAsJSON, exportAsPNG, exportAsCSV, exportAsPDF } from '../features/export.js';
 
 
 /**
- * Adds export options to the interface.
+ * Attach the export functionality to the dropdown menu
+ * Ensures only one event listener is active at a time.
  * @param {Object} graphData - The graph data containing nodes and links.
  * @param {SVGElement} svgElement - The SVG element representing the visualization.
  */
-/*
+
 export function addExportOptions(graphData, svgElement) {
-  document.getElementById('export-json').addEventListener('click', () => exportAsJSON(graphData));
-  document.getElementById('export-png').addEventListener('click', () => exportAsPNG(svgElement));
-  document.getElementById('export-csv').addEventListener('click', () => exportAsCSV(graphData));
-  document.getElementById('export-pdf').addEventListener('click', () => exportAsPDF(svgElement));
+const saveAsDropdown = document.getElementById('save-as');
+
+// ✅ Remove any existing event listeners before adding a new one
+saveAsDropdown.replaceWith(saveAsDropdown.cloneNode(true)); // **This removes all old event listeners**
+    
+const newSaveAsDropdown = document.getElementById('save-as'); // Re-fetch after replacing
+
+// ✅ Add event listener with correct graphData reference
+newSaveAsDropdown.addEventListener('change', (event) => handleExportSelection(event, graphData));
+
 }
-*/
+
+
+/**
+ * Handles the dropdown selection and triggers the correct export function.
+ * @param {Event} event - The dropdown selection event.
+ * @param {Object} graphData - The lattice graph data.
+ */
+
+function handleExportSelection(event, graphData) {
+    const selectedOption = document.getElementById('save-as').value;
+    console.log(`🔹 Selected export option: ${selectedOption}`);
+
+    if (selectedOption === "export-json") {
+      console.log("✅ Exporting as JSON...");
+      exportAsJSON(graphData);
+  } else if (selectedOption === "export-png") {
+        console.log("✅ Exporting as PNG...");
+        const svgElement = document.querySelector("#graph-container svg");
+
+        if (!svgElement) {
+            console.error("❌ No SVG element found for export.");
+            alert("Error: No lattice visualization found.");
+            return;
+        }
+
+        exportAsPNG(svgElement);
+    }
+    else if (selectedOption === "export-csv") {
+      console.log("✅ Exporting as CSV...");
+      exportAsCSV(graphData);
+  } else if (selectedOption === "export-pdf") {
+    console.log("✅ Exporting as PDF...");
+    const svgElement = document.querySelector("#graph-container svg");
+
+    if (!svgElement) {
+        console.error("❌ No SVG element found for export.");
+        alert("Error: No lattice visualization found.");
+        return;
+    }
+
+    exportAsPDF(svgElement);
+}
+
+    // ✅ Reset dropdown after an export is triggered (prevents double execution)
+    event.target.value = ""; // Reset selection to prevent re-triggering
+
+}
+
+
 /**
  * Extracts `Extent` and `Intent` from the `label` property of a node.
  * @param {Object} node - The node object containing the `label`.
@@ -123,7 +178,8 @@ export async function testCanonicalBaseDynamic(filePath) {
  */
 export function createLattice(graphData, options = {}) {
   //const { container = 'body', width = 800, height = 600 } = options;
-  
+  console.log("🚀 Creating Lattice Visualization...");
+
   // Merge options with defaults from the config file
   const { container = 'body', width, height } = {
     ...GRAPH_CONFIG.dimensions,
@@ -134,54 +190,32 @@ export function createLattice(graphData, options = {}) {
    if (!graphData || !graphData.nodes || !graphData.links) {
     throw new Error('⚠️Invalid graphData. Ensure it includes nodes and links.');
   }
-  
-  console.log("📌 Nodes before reduced labeling:", graphData.nodes);
-  console.log("📌 Links before reduced labeling:", graphData.links);
 
-    // Ensure nodes and links are valid before calling reduced labeling
-
-    if (Array.isArray(graphData.nodes) && Array.isArray(graphData.links)) {
-      computeReducedLabels(graphData.nodes, graphData.links);
-  } else {
-      console.error("❌ Nodes or links are not in array format!", graphData);
-  }
-
-  // ✅ Compute superconcepts and subconcepts before rendering
-  computeSuperSubConcepts(graphData);
-
-  console.log("📌 Assigning layers using the Coffman-Graham Algorithm...");
+  console.log("📌 Assigning Layers...");
   const layers = assignLayers(graphData);
-  graphData.layers = layers; // Add layers to graphData
-  
+  graphData.layers = layers;  // Store layers inside graphData
+
+
+console.log("📌 Ordering Nodes Within Layers...");
+orderVerticesWithinLayers(layers, graphData);  // Optimize horizontal positioning
+
+  console.log("📌 Assigning X & Y positions...");
   // Set y-coordinates for nodes based on their assigned layers
   const layerSpacing = height / (layers.length + 1);
+
   layers.forEach((layer, layerIndex) => {
+    const xSpacing = (width - 2 * GRAPH_CONFIG.dimensions.padding) / (layer.length + 1);
       layer.forEach((node, nodeIndex) => {
-          node.y = layerIndex * layerSpacing; // Assign vertical spacing based on layer index
-          node.x = (nodeIndex + 1) * (width / (layer.length + 1)); // Horizontal spacing
-          node.layer = layerIndex; // Add layer information for constraints
+          node.y = GRAPH_CONFIG.dimensions.padding + layerIndex * layerSpacing; // Assign vertical spacing based on layer index
+          node.x = GRAPH_CONFIG.dimensions.padding +(nodeIndex + 1) * xSpacing; // Horizontal spacing
+          //node.layer = layerIndex; // Add layer information for constraints
       });
   });
 
-   /* Adjust top and bottom concepts to be centered horizontally
-  const topConcept = graphData.nodes.find((node) => node.superconcepts.length === 0);
-  const bottomConcept = graphData.nodes.find((node) => node.subconcepts.length === 0);
 
-  if (topConcept) {
-      topConcept.x = width / 2;
-      console.log("📌 Top concept positioned at center:", topConcept.id);
-  }
+  console.log("📌 Computing Superconcepts and Subconcepts...");
+  computeSuperSubConcepts(graphData);  // Ensure correct hierarchical relationships
 
-  if (bottomConcept) {
-      bottomConcept.x = width / 2;
-      console.log("📌 Bottom concept positioned at center:", bottomConcept.id);
-  }
-*/
-
-  // Order nodes within layers to minimize edge crossings
-  console.log("📌 Ordering nodes within layers...");
-  orderVerticesWithinLayers(layers, graphData);
-  
   // ✅ Compute reduced labels before rendering
   computeReducedLabels(graphData.nodes, graphData.links);
 
@@ -201,30 +235,21 @@ export function createLattice(graphData, options = {}) {
   
   // Render the graph using dynamic dimensions and get the SVG elements
   const { svg, linkGroup, nodeGroup, labelGroup } = renderGraph(container, graphData, { width, height });
-  //const g = svg.select('.graph-transform'); // Select the `g` group
- 
-  /* Adjust the graph transform group for padding from config
-  const padding =  GRAPH_CONFIG.dimensions.padding;
-  svg
-    .attr('width', GRAPH_CONFIG.dimensions.padding * 2) // Increase SVG width with dynamic padding
-    .attr('height', GRAPH_CONFIG.dimensions.padding * 2); // Increase SVG height with dynamic padding
-
-  // Adjust the translation of the graph transform group
-  const g = svg.select('.graph-transform');
-  g.attr('transform', `translate(${width / 2 + padding}, ${height / 2 + padding})`);
-  */
-  // Create the simulation and add interactivity
-  const simulation = createSimulation(graphData, linkGroup, nodeGroup,labelGroup, { width, height });
-
+  
+  // ✅ Ensure svg and nodeGroup exist before adding interactivity
+  if (!svg || nodeGroup.empty()) {
+    console.error("❌ SVG or nodeGroup is undefined! Cannot add interactivity.");
+    return;
+  }
   // Add interactivity after creating the simulation
-  addInteractivity(svg, simulation);
+  //addInteractivity(svg, simulation);
+
+  // ✅ Pass correct arguments to `addInteractivity` and `addNodeInteractivity`
+  addInteractivity(svg, graphData);
 
   // Add node-specific interactivity (hover, click, shortest path, etc.)
-  addNodeInteractivity(nodeGroup, linkGroup, graphData);
+  addNodeInteractivity(nodeGroup, linkGroup, graphData, updateLinks);
 
-   /*Center graph dynamically after initial rendering
-   centerGraph(svg,{width, height});
-  */
  // Dynamically center the graph
  //const graphGroup = svg.select('.graph-transform');
  setTimeout(() => {
@@ -233,10 +258,10 @@ export function createLattice(graphData, options = {}) {
  }, 100);
 
   // Add export options after rendering
-  addExportOptions(graphData, svg.node());
+  addExportOptions(graphData);
 
-  // Return the SVG, simulation and metrics for further use
-  return { svg, simulation, metrics };
+  // Return the SVG and metrics for further use
+  return { svg, metrics };
 }
 
 

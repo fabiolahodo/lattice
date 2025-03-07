@@ -5,7 +5,7 @@ import { createLattice } from '../core/lattice.js';
 import { extractConceptsFromGraph, computeCanonicalBase } from '../core/canonicalBase.js';
 import { calculateMetrics } from '../core/metrics.js'; 
 import { setupFilterControls } from '../features/setupFilters.js';
-import { parseSerialized } from '../core/latticeParser.js';
+import { parseSerializedData } from '../core/latticeParser.js';
 
 /**
  * Sets up file upload handling and triggers concept lattice generation upon user interaction.
@@ -21,7 +21,6 @@ export function setupFileUpload() {
     const computeButton = document.getElementById('compute-canonical-base');
     const resultsContainer = document.getElementById('results');
     const convertButton = document.getElementById("convert-and-download");
-
 
 
      // Debug: Log what elements exist
@@ -81,7 +80,7 @@ export function setupFileUpload() {
         reader.readAsText(file); // Read the file as text
     });
 
-    // When "Load JSON File" is clicked, process the file
+    // When "Load JSON File" is clicked, load JSON and visualize lattice
     loadButton.addEventListener("click", () => {
         if (!uploadedData) {
             console.warn("⚠️ No file uploaded. Cannot proceed.");
@@ -108,7 +107,7 @@ export function setupFileUpload() {
 
 
     /**
-     * Handles the Compute button click event to process the uploaded data.
+     * Compute Canonical Base. Handles the Compute button click event to process the uploaded data.
      */
     computeButton.addEventListener('click', () => {
         
@@ -158,15 +157,24 @@ convertButton.addEventListener("click", () => {
     }
 
     try {
-      const parsedData = parseSerialized(uploadedData);
+      const parsedData = parseSerializedData(uploadedData);
 
-      // Trigger download for parsed data
+       //Remove existing download links before creating a new one
+       const existingDownloadLink = document.getElementById("download-link");
+       if (existingDownloadLink) {
+           existingDownloadLink.remove();
+       }
+
+       //Create a new download link and add it properly Trigger download for parsed data
       const blob = new Blob([JSON.stringify(parsedData, null, 2)], { type: 'application/json' });
       const downloadLink = document.createElement('a');
       downloadLink.href = URL.createObjectURL(blob);
       downloadLink.download = 'parsedLattice.json';
+      downloadLink.id = "download-link"; // Assign an ID to track the download link
+
+      document.body.appendChild(downloadLink);
       downloadLink.click();
-      URL.revokeObjectURL(downloadLink.href);
+      document.body.removeChild(downloadLink);
 
       console.log('✅ Parsed data downloaded successfully.');
     } catch (error) {
