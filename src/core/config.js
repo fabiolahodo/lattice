@@ -31,7 +31,7 @@ export const GRAPH_CONFIG = {
     },
     simulation: {
       collisionFactor: 1.2, // Multiplier for collision radius
-      chargeFactor: 5, // Multiplier for charge/repulsion strength
+      chargeFactor: 0.6, // Multiplier for charge/repulsion strength
       throttling: true, // Enable throttling for simulation updates
       tickInterval: 30, // Minimum interval (ms) between simulation ticks for large graphs
     },
