@@ -16,6 +16,7 @@ export default {
       format: 'esm', // ESM build for module imports
     },
   ],
+  external: ['rgbcolor'],  // Mark `rgbcolor` as external to prevent Rollup errors
   plugins: [
     resolve(), // Resolves node_modules dependencies
     commonjs(), // Converts CommonJS modules to ES6
