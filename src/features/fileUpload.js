@@ -149,7 +149,12 @@ export function setupFileUpload() {
 });
 
 // Convert and Download button click event
+//convertButton.replaceWith(convertButton.cloneNode(true)); // Remove old listeners
+//convertButton = document.getElementById("convert-and-download");
+
 convertButton.addEventListener("click", () => {
+    console.log("🟢 Convert button clicked!");
+    
     if (!uploadedData) {
       console.warn("⚠️ No file uploaded. Cannot proceed with conversion.");
       alert("⚠️ Please upload a JSON file first.");
