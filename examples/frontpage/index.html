@@ -245,6 +245,31 @@
   opacity: 1;
 }
 
+.node-label-group div {
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.extent-label {
+  color: blue;
+  font-weight: bold;
+}
+
+.intent-label {
+  color: green;
+  font-style: italic;
+}
+
+.node-label {
+  max-width: none;
+  overflow: visible;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+
+
   </style>
 </head>
 <body>
@@ -283,122 +308,8 @@
       <p>
         This is a simple example of a concept lattice. Taken from <a href="https://upriss.github.io/fca/fcaintro.html">Ute Priss</a> website.
       </p>
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th></th>
-              <th>needs water to live</th>
-              <th>lives in water</th>
-              <th>lives on land</th>
-              <th>needs chlorophyll</th>
-              <th>dicotyledon</th>
-              <th>monocotyledon</th>
-              <th>can move</th>
-              <th>has limbs</th>
-              <th>breast feeds</th>
-          </tr>
-        </thead>
-        <tbody></tbody> 
-        <tr>
-              <th>fish leech</th>
-              <td class="x">×</td>
-              <td class="x">×</td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td class="x">×</td>
-              <td></td>
-              <td></td>
-          </tr>
-          <tr>
-              <th>bream</th>
-              <td class="x">×</td>
-              <td class="x">×</td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td class="x">×</td>
-              <td class="x">×</td>
-              <td></td>
-          </tr>
-          <tr>
-              <th>frog</th>
-              <td class="x">×</td>
-              <td class="x">×</td>
-              <td class="x">×</td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td class="x">×</td>
-              <td class="x">×</td>
-              <td></td>
-          </tr>
-          <tr>
-              <th>dog</th>
-              <td class="x">×</td>
-              <td></td>
-              <td class="x">×</td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td class="x">×</td>
-              <td class="x">×</td>
-              <td class="x">×</td>
-          </tr>
-          <tr>
-              <th>water weeds</th>
-              <td class="x">×</td>
-              <td class="x">×</td>
-              <td></td>
-              <td class="x">×</td>
-              <td></td>
-              <td class="x">×</td>
-              <td></td>
-              <td></td>
-              <td></td>
-          </tr>
-          <tr>
-              <th>reed</th>
-              <td class="x">×</td>
-              <td></td>
-              <td class="x">×</td>
-              <td class="x">×</td>
-              <td></td>
-              <td class="x">×</td>
-              <td></td>
-              <td></td>
-              <td></td>
-          </tr>
-          <tr>
-              <th>bean</th>
-              <td class="x">×</td>
-              <td></td>
-              <td class="x">×</td>
-              <td class="x">×</td>
-              <td class="x">×</td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-          </tr>
-          <tr>
-              <th>corn</th>
-              <td class="x">×</td>
-              <td></td>
-              <td class="x">×</td>
-              <td class="x">×</td>
-              <td></td>
-              <td class="x">×</td>
-              <td></td>
-              <td></td>
-              <td></td>
-          </tr>
-        </tbody>
-      </table>
-      </div>      
+      <button id="show-formal-context" >Show Formal Context</button>
+      <div class="table-container"></div>      
     </section>
 
     <!-- Metrics Section -->
@@ -445,7 +356,7 @@
       <div>
         <label for="labeling-mode"><strong>Labeling Mode:</strong></label>
         <select id="labeling-mode">
-          <option value="default">ID</option>
+          <option value="id">ID</option>
           <option value="full">Full Labeling</option>
           <option value="reduced">Reduced Labeling</option>
         </select>
@@ -498,7 +409,13 @@
   <!-- Include JavaScript -->
   <!--<script type="module" src="../../dist/bundle.js" data-dataset="../../data/live-in-water.json"></script>-->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script type="module" src="./fileUpload.js"></script>
+  <script type="module">
+    import { setupFileUpload } from './fileUpload.js';
+  
+    document.addEventListener("DOMContentLoaded", () => {
+      setupFileUpload(); // Ensure this runs only once
+    });
+  </script>
   <script type="module" src="../../dist/bundle.js">
     import { createLattice } from './lattice.js';
 
@@ -549,5 +466,32 @@
     setupFileUpload();
   });
 </script>
+<script type="module">
+  import { updateLabels } from './src/core/rendering.js';
+  window.updateLabels = updateLabels; // Make it globally available
+</script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+      const labelModeSelector = document.getElementById("labeling-mode");
+      if (!labelModeSelector) {
+          console.error("❌ Labeling mode selector not found in the DOM.");
+          return;
+      }
+      
+      labelModeSelector.addEventListener("change", function() {
+          const selectedMode = this.value;
+          console.log(`Switching Labeling Mode to: ${selectedMode}`);
+
+          if (typeof updateLabels === "function") {
+              updateLabels(selectedMode);
+          } else {
+              console.error("❌ updateLabels function is not defined. Check if rendering.js is loaded.");
+          }
+      });
+  });
+</script>
+<script src="../../src/core/generateTable.js"></script>
+
 </body>
 </html>
