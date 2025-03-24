@@ -13,7 +13,7 @@
         {"id": "11", "label": "Extent\n{§15, §17, §18.1, §18.2}\nIntent{roof, stairs, stairwell}", "level": 4},
         {"id": "12", "label": "Extent\n{§15, §18.1, §18.2}\nIntent{roof, stairwell, windows}", "level": 4},      
         {"id": "13", "label": "Extent\n{§15, §18.1, §18.2, §32}\nIntent{stairs, stairwell, windows}", "level": 4},
-        {"id": "14", "label": "Extent\n{§15, §17}\nIntent{roof. stairs, stairwell, chimney}", "level": 5},
+        {"id": "14", "label": "Extent\n{§15, §17}\nIntent{roof, stairs, stairwell, chimney}", "level": 5},
         {"id": "15", "label": "Extent\n{§15, §18.1}\nIntent{roof, chimney, windows, cellar floor}", "level": 5},
         {"id": "16", "label": "Extent\n{§15, §18.2}\nIntent{roof, stairwell, windows}", "level": 5},
         {"id": "17", "label": "Extent\n{§17}\nIntent{roof, chimney, stairwell, fire door}", "level": 6},

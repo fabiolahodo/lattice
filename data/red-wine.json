@@ -7,7 +7,7 @@
       { "id": 5, "label": "Extent\n{Beaujolais, Burgundy, Bordeaux, Barbera, Barolo}\nIntent{16°C, 17°C}", "level": 3 },
       { "id": 6, "label": "Extent\n{Burgundy, Bordeaux, Barbera, Barolo, Brunello, Negroamaro}\nIntent{17°C, 18°C}", "level": 3 },
       { "id": 7, "label": "Extent\n{Beaujolais, Burgundy, Bordeaux}\nIntent{15°C, 16°C, 17°C}", "level": 4 },
-      { "id": 8, "label": "Extent\n{Burgundy, Bordeaux, Barolo, Barbera, Negroamaro}\nIntent{16°C, 17°C, 18°C}", "level": 4 },
+      { "id": 8, "label": "Extent\n{Burgundy, Bordeaux, Barolo, Barbera}\nIntent{16°C, 17°C, 18°C}", "level": 4 },
       { "id": 9, "label": "Extent\n{Bordeaux, Barolo, Brunello}\nIntent{17°C, 18°C, 19°C}", "level": 4 },
       { "id": 10, "label": "Extent\n{Burgundy, Bordeaux}\nIntent{15°C, 16°C, 17°C, 18°C}", "level": 5 },
       { "id": 11, "label": "Extent\n{Barolo, Bordeaux}\nIntent{16°C, 17°C, 18°C, 19°C}", "level": 5 },
