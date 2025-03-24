@@ -1,4 +1,4 @@
-//src/core/reducedLabeling.js
+// src/core/reducedLabeling.js 
 
 // Import dependencies
 import { computeSuperSubConcepts } from './interactivity.js';
@@ -8,42 +8,45 @@ import { computeSuperSubConcepts } from './interactivity.js';
  * @param {Object} node - The node object containing the `label`.
  * @returns {Object} - An object containing `extent` and `intent` arrays.
  */
-function parseNodeLabel(node) {
+export function parseNodeLabel(node) {
     if (!node.label) {
         console.warn(`⚠️ Missing label for node ${node.id}. Defaulting to empty extent/intent.`);
         return { extent: [], intent: [] };
     }
 
+    // Extract Full Extent
     const extentMatch = node.label.match(/Extent\s*\{([^}]*)\}/);
-    const intentMatch = node.label.match(/Intent\s*\{([^}]*)\}/);
+    const extent = extentMatch
+        ? extentMatch[1].split(',').map(e => e.trim()).filter(e => e !== '')
+        : [];
 
-    return {
-        extent: extentMatch ? extentMatch[1].split(',').map(e => e.trim()).filter(e => e !== '') : [],
-        intent: intentMatch ? intentMatch[1].split(',').map(i => i.trim()).filter(i => i !== '') : []
-    };
+    // Extract Full Intent
+    const intentMatch = node.label.match(/Intent\s*\{([^}]*)\}/);
+    const intent = intentMatch
+        ? intentMatch[1].split(',').map(i => i.trim()).filter(i => i !== '')
+        : [];
+
+    return { extent, intent };
 }
 
 /**
  * Formats extent and intent for visualization.
- * Distinguishes between extent and intent with clear visual markers.
  * @param {Array} extent - Array of extent elements (objects).
  * @param {Array} intent - Array of intent elements (attributes).
  * @returns {string} - Formatted label string for visualization.
  */
 export function formatLabel(extent, intent) {
-    const extentLabel = extent.length > 0 
-    ? extent.join(", ") : ""; // Skip empty
-    const intentLabel = intent.length > 0 
-    ? intent.join(", ") : ""; // Skip empty
+    const extentLabel = extent.length > 0 ? `<b>${extent.join(", ")}</b>` : "";
+    const intentLabel = intent.length > 0 ? `<i>${intent.join(", ")}</i>` : "";
 
     if (extentLabel && intentLabel) {
-        return `[E: ${extentLabel}] [: ${intentLabel}]`;
+        return `<div style='text-align:center;'>${extentLabel}<br/>${intentLabel}</div>`;
     } else if (extentLabel) {
-        return `[E: ${extentLabel}]`;
+        return `<div style='text-align:center;'>${extentLabel}</div>`;
     } else if (intentLabel) {
-        return `[I: ${intentLabel}]`;
+        return `<div style='text-align:center;'>${intentLabel}</div>`;
     }
-    return ""; // No label if both are empty
+    return "";
 }
 
 /**
@@ -60,9 +63,22 @@ export function computeReducedLabels(nodes, links) {
         return;
     }
 
-    // Initialize tracking sets for global usage
-    const assignedExtents = new Set(); // Tracks already assigned extents (objects)
-    const assignedIntents = new Set(); // Tracks already assigned intents (attributes)
+    // Identify the top concept (⊤) -> has no superconcepts
+    const topConcept = nodes.find(node => node.superconcepts.length === 0);
+    if (!topConcept) {
+        console.error("❌ No top concept found! Check your graph data.");
+    } else {
+        console.log("✅ Top Concept Identified:", topConcept.id);
+    }
+
+    // Identify the bottom concept (⊥) -> has no subconcepts
+    const bottomConcept = nodes.find(node => node.subconcepts.length === 0);
+    if (!bottomConcept) {
+        console.error("❌ No bottom concept found! Check your graph data.");
+    } else {
+        console.log("✅ Bottom Concept Identified:", bottomConcept.id);
+    }
+
 
     // Step 1: Ensure every node has necessary properties
     nodes.forEach(node => {
@@ -88,90 +104,83 @@ export function computeReducedLabels(nodes, links) {
     // Step 2: Compute superconcepts & subconcepts
     computeSuperSubConcepts({ nodes, links });
 
-    /* Identify top and bottom concepts
-    const topConcept = nodes.find(node => node.superconcepts.length === 0);
-    const bottomConcept = nodes.find(node => node.subconcepts.length === 0);
-
-    if (!topConcept || !bottomConcept) {
-        console.error("❌ Could not determine top and bottom concepts!");
-        return;
-    }
-
-    console.log(`✅ Top Concept: ${topConcept.id}`);
-    console.log(`✅ Bottom Concept: ${bottomConcept.id}`);
-    */
     // Step 3: Compute full intent (top-down propagation) and full extent (bottom-up propagation)
     nodes.forEach(node => {
+        // Initialize intent and extent properties
+        node.fullIntent = new Set(node.intent || []);
+        node.fullExtent = new Set(node.extent || []);
+
         // Propagate intent from superconcepts
+         // Ensure intent propagation starts from the correct top concept
+        if (node !== topConcept) {
         node.superconcepts?.forEach(superconcept => {
-            superconcept.fullIntent?.forEach(attr => node.fullIntent.add(attr));
-        });
-       node.fullIntent = [...node.fullIntent]; // Convert Set to Array
- 
-    // Propagate extent from subconcepts
-    const inheritedExtent = new Set();
-    node.subconcepts?.forEach(subconcept => {
-        subconcept.fullExtent.forEach(obj => {
-            if (!node.fullExtent.has(obj)) {
-                node.fullExtent.add(obj);
-                inheritedExtent.add(obj); // Avoid duplication
+            if (superconcept.fullIntent) {
+                superconcept.fullIntent.forEach(attr => node.fullIntent.add(attr));
             }
         });
+    }
+        // Ensure extent propagation starts from the correct bottom concept
+        if (node !== bottomConcept) {
+        node.subconcepts?.forEach(subconcept => {
+            if (subconcept.fullExtent) {
+                subconcept.fullExtent.forEach(obj => node.fullExtent.add(obj));
+            }
+        });
+    }
+        // Convert sets to arrays before storing
+        node.fullIntent = [...node.fullIntent];
+        node.fullExtent = [...node.fullExtent];
     });
-        node.fullExtent = [...node.fullExtent]; // Convert Set to Array
-    });
+
     console.log("✅ Nodes after full extent/intent computation:", nodes);
 
-    // Step 3: Compute reduced labels
-    nodes.forEach(node => {
-       /* if (node === topConcept || node === bottomConcept) {
-            // Skip labeling for the top and bottom concepts
-            node.reducedExtent = [];
-            node.reducedIntent = [];
-            return;
-        }
-        */    
-        const inheritedExtent = new Set();
-        node.subconcepts?.forEach(sub => sub.fullExtent?.forEach(obj => inheritedExtent.add(obj))); // Now from bottom-up
+    // Step 4: Compute reduced labels
+   /* nodes.forEach(node => {
+        // Compute reducedExtent by excluding objects inherited from subconcepts
+        node.reducedExtent = node.fullExtent.filter(obj => 
+            !node.subconcepts.some(sub => sub.fullExtent.includes(obj))
+        );
 
-         /*
-        const inheritedIntent = new Set();
-        node.superconcepts?.forEach(sup => sup.fullIntent?.forEach(attr => inheritedIntent.add(attr))); // Now from top-down
+        // Compute reducedIntent by excluding attributes inherited from superconcepts
+        node.reducedIntent = node.fullIntent.filter(attr => 
+            !node.superconcepts.some(sup => sup.fullIntent.includes(attr))
+        );
 
-        // Reduced Extent: Remove inherited objects
-        node.reducedExtent = node.fullExtent.filter(obj => !inheritedExtent.has(obj));
-
-        // Reduced Intent: Remove inherited attributes
-        node.reducedIntent = node.fullIntent.filter(attr => !inheritedIntent.has(attr));
-
-        console.log(`✅ Node ${node.id} Reduced Labels:`, {
-            fullExtent: node.fullExtent,
-            fullIntent: node.fullIntent,
+        console.log(`✅ Node ${node.id} Updated Reduced Label:`, {
             reducedExtent: node.reducedExtent,
             reducedIntent: node.reducedIntent
         });
-         */
-
-     // Compute reducedExtent by excluding objects already assigned to other nodes
-     node.reducedExtent = node.fullExtent.filter(obj => 
-         !assignedExtents.has(obj)&& !inheritedExtent.has(obj));
-     // Add the reducedExtent to the global tracker
-     node.reducedExtent.forEach(obj =>  assignedExtents.add(obj));
-
-     // Compute reducedIntent by excluding attributes already assigned to other nodes
-     node.reducedIntent = node.intent.filter(attr => !assignedIntents.has(attr));
-     // Add the reducedIntent to the global tracker
-     node.reducedIntent.forEach(attr =>assignedIntents.add(attr));
-    
-     console.log(`✅ Node ${node.id} Updated Reduced Label:`, {
-        reducedExtent: node.reducedExtent,
-        reducedIntent: node.reducedIntent
     });
- });
+    */ 
+   
+ // Step 4: Compute reduced labels
+    nodes.forEach(node => {
+        if (!node) {
+            console.warn("⚠️ Skipping undefined node in computeReducedLabels.");
+            return;
+        }
 
+    // Compute reducedExtent by excluding inherited objects
+node.reducedExtent = node.fullExtent.filter(obj => {
+    return !node.subconcepts.some(sub => 
+        sub.fullExtent.includes(obj) || sub.reducedExtent.includes(obj)
+    );
+});
 
-// Final visualization or debug logs for verification
-visualizeReducedLabels(nodes);
+// Compute reducedIntent by excluding inherited attributes
+node.reducedIntent = node.fullIntent.filter(attr => {
+    return !node.superconcepts.some(sup => 
+        sup.fullIntent.includes(attr) || sup.reducedIntent.includes(attr)
+    );
+});
+
+console.log(`✅ Node ${node.id}:`, {
+    reducedExtent: node.reducedExtent,
+    reducedIntent: node.reducedIntent
+});
+});
+    console.log("�� Final Reduced Labels Computed:", nodes);    
+
 }
 
 /**
