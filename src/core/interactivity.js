@@ -17,6 +17,61 @@ let selectedNodes = []; // Track selected nodes for shortest path
  */
 export function computeSuperSubConcepts(graphData) {
   if (!graphData || !Array.isArray(graphData.nodes) || !Array.isArray(graphData.links)) {
+      console.error("❌ computeSuperSubConcepts received invalid graphData:", graphData);
+      return;
+  }
+
+  console.log("✅ computeSuperSubConcepts received:", graphData.nodes.length, "nodes and", graphData.links.length, "links");
+
+  // Reset superconcepts and subconcepts
+  graphData.nodes.forEach(node => {
+      node.superconcepts = [];
+      node.subconcepts = [];
+  });
+
+  // Assign relationships based on links
+  graphData.links.forEach(link => {
+      /*
+      let parentNode = graphData.nodes.find(n => n.id == link.source);
+      let childNode = graphData.nodes.find(n => n.id == link.target);
+     
+
+      let parentNode = graphData.nodes.find(n => String(n.id) === String(link.source));
+      let childNode = graphData.nodes.find(n => String(n.id) === String(link.target));
+     */
+
+      let parentNode = graphData.nodes.find(n => String(n.id) === String(link.source.id || link.source));
+      let childNode = graphData.nodes.find(n => String(n.id) === String(link.target.id || link.target));
+
+      if (!parentNode || !childNode) {
+          console.warn(`⚠️ Link references invalid nodes:`, link);
+          return;
+      }
+
+      // Avoid duplicates
+      if (!parentNode.subconcepts.some(n => n.id === childNode.id)) {
+          parentNode.subconcepts.push(childNode);
+      }
+      if (!childNode.superconcepts.some(n => n.id === parentNode.id)) {
+          childNode.superconcepts.push(parentNode);
+      }
+  });
+
+  //console.log("✅ Superconcepts and subconcepts assigned correctly.");
+
+  // Log computed super/subconcepts
+  console.log("✅ Final Node Assignments:");
+  graphData.nodes.forEach(node => {
+      console.log(`🔍 Node ${node.id}: Superconcepts ->`, node.superconcepts.map(n => n.id));
+      console.log(`🔍 Node ${node.id}: Subconcepts ->`, node.subconcepts.map(n => n.id));
+  });
+
+}
+
+
+/*
+export function computeSuperSubConcepts(graphData) {
+  if (!graphData || !Array.isArray(graphData.nodes) || !Array.isArray(graphData.links)) {
     console.error("❌ computeSuperSubConcepts received invalid graphData:", graphData);
     return;
   }
@@ -44,13 +99,14 @@ export function computeSuperSubConcepts(graphData) {
     }
   });
 }
-
+*/
 
 /**
  * Updates link positions when nodes move.
  * @param {Object} graphData - The graph data containing nodes and links.
  */
 export function updateLinks(graphData) {
+  
   d3.selectAll('.link')
     .data(graphData.links)
     .join('line')
@@ -58,6 +114,7 @@ export function updateLinks(graphData) {
     .attr('y1', d => d.source.y)
     .attr('x2', d => d.target.x)
     .attr('y2', d => d.target.y);
+
 }
 
 /**
@@ -103,7 +160,10 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
 
   // Drag Behavior
   nodeGroup.call(d3.drag()
-    .on("drag", (event, d) => {
+   .on("start", (event, d) => {
+      d3.select(this).raise();// Bring the dragged node to the front
+    })
+    .on("drag",function(event, d){
     
     // Compute movement constraints (node cannot move beyond its parents or children in y-axis)
     let minY = d.superconcepts.length > 0 ? Math.max(...d.superconcepts.map(n => n.y)) : 0;
@@ -112,15 +172,60 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
       d.x = event.x;
       //d.y = event.y;
       d.y = Math.max(minY + 20, Math.min(event.y, maxY -25)); // Add some padding for constrained y-axis movement
-      d3.select(this).attr("cx", d.x).attr("cy", d.y);
-      updateNodes();
-      updateLinks(graphData);
+      
+      // ✅ Ensure both attributes (`cx`, `cy`) and transformation (`translate()`) are updated
+      d3.select(this)
+        //.attr("cx", d.x)
+        //.attr("cy", d.y)
+        .attr("transform", `translate(${d.x}, ${d.y})`);  // Move the node visually
+
+      // ✅ Update edges dynamically
+       updateLinks(graphData);
+/*
+      // ✅ Ensure linked edges move in real-time
+    d3.selectAll(".link")
+    .filter(link => link.source === d || link.target === d)
+    .attr("x1", link => link.source.x)
+    .attr("y1", link => link.source.y)
+    .attr("x2", link => link.target.x)
+    .attr("y2", link => link.target.y);
+
+    updateNodes(graphData); // Ensure all elements update
+  */
     })
+    /*.on("end", () => {   
+      updateNodes(graphData); // ✅ Pass `graphData` when calling updateNodes
+    
+    })
+    */
+    .on("end", (event, d) => {
+        //mouseupHandler(event, d);
+        updateNodes(graphData);
+    })
+    
   );
+/*
+  function mouseupHandler(event, d) {
+    d3.select(this).classed("dragging", false);
+
+    if (!graphData) {
+        console.error("❌ graphData is not defined in mouseupHandler!");
+        return;
+    }
+
+    updateNodes(graphData);
+}
+*/
 
   // **Click-to-Zoom & Highlight Node**
   nodeGroup.on('click', function (event, clickedNode) {
     console.log(`📌 Node Clicked: ${clickedNode.id}`);
+
+    // Ensure clickedNode exists
+    if (!clickedNode) {
+      console.error("❌ Click event fired but no node was found!");
+      return;
+  }
 
     const svg = d3.select("svg");
     if (!zoomBehavior) {
@@ -136,32 +241,56 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
       .duration(600)
       .call(zoomBehavior.transform, d3.zoomIdentity.translate(newX, newY).scale(newScale));
 
+    // ✅ Highlight clicked node and reset others
+    nodeGroup.selectAll("circle")
+        .attr("fill", d => d.id === clickedNode.id ? GRAPH_CONFIG.node.selectedColor : GRAPH_CONFIG.node.color);
+
+    /*
      // Highlight clicked node and connected links
      nodeGroup.attr('fill', (node) =>
         node.id === clickedNode.id
             ? GRAPH_CONFIG.node.selectedColor
             : GRAPH_CONFIG.node.color
     );
-    /*
+    
+
     // **Highlight the Selected Node**
     nodeGroup.attr("fill", GRAPH_CONFIG.node.color); // Reset all nodes to default color
     d3.select(this).attr("fill", GRAPH_CONFIG.node.selectedColor); // Highlight the clicked node
+    
     */
    
     // **Highlight Links connected to the Selected Node**
-    linkGroup.attr("stroke", link =>
-       ( link.source === clickedNode || link.source.id === clickedNode.id || 
-        link.target === clickedNode || link.target.id === clickedNode.id) 
-            ? GRAPH_CONFIG.link.highlightedColor // Highlight linked edges in red
-            : GRAPH_CONFIG.link.color // Reset other edges to default
-      )
+    if (!linkGroup || linkGroup.size() === 0) {
+      console.error("❌ linkGroup is not initialized properly. Cannot update link styles.");
+      return;
+  }
+
+  linkGroup
+      .attr("stroke", d => {
+        const srcId = d.source?.id ?? d.source;
+        const tgtId = d.target?.id ?? d.target;
+        return (srcId === clickedNode.id || tgtId === clickedNode.id) ? GRAPH_CONFIG.link.highlightedColor : GRAPH_CONFIG.link.color;
+      })
+      .attr("stroke-width", d => {
+        const srcId = d.source?.id ?? d.source;
+        const tgtId = d.target?.id ?? d.target;
+        return (srcId === clickedNode.id || tgtId === clickedNode.id) ? 6 : GRAPH_CONFIG.link.thickness;
+      });
+
+  /*
+    linkGroup
+      .attr("stroke", link =>
+        ( link.source.id === clickedNode.id || link.target.id === clickedNode.id) 
+              ? GRAPH_CONFIG.link.highlightedColor // Highlight linked edges in red
+              : GRAPH_CONFIG.link.color // Reset other edges to default
+        )
       .attr("stroke-width", link =>
-        (link.source === clickedNode || link.source.id === clickedNode.id || 
-            link.target === clickedNode || link.target.id === clickedNode.id) 
+        (link.source.id === clickedNode.id || link.target.id === clickedNode.id) 
             ? 4 // Thicker line for connected edges
             : GRAPH_CONFIG.link.thickness // Default thickness for others
         );
-
+  */
     // **Ensure Node Metrics Exist**
     if (!clickedNode.metrics) {
       console.warn(`⚠️ Node ${clickedNode.id} has missing metrics. Recalculating...`);
@@ -169,12 +298,25 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
     }
 
     // **Format Superconcepts & Subconcepts**
-    const superconceptsInfo = clickedNode.superconcepts
+    
+    /*const superconceptsInfo = clickedNode.superconcepts
         .map((node) => `${node.id} (${node.label || 'No Label'})`)
-        .join(', ');
+        .join(', ') || 'None';
     const subconceptsInfo = clickedNode.subconcepts
         .map((node) => `${node.id} (${node.label || 'No Label'})`)
-        .join(', ');
+        .join(', ') || 'None';
+    */
+
+  const superconceptsInfo = clickedNode.superconcepts && clickedNode.superconcepts.length > 0
+    ? clickedNode.superconcepts.map(node => `${node.id} (${node.label || 'No Label'})`).join(', ')
+    : 'None';
+
+  const subconceptsInfo = clickedNode.subconcepts && clickedNode.subconcepts.length > 0
+      ? clickedNode.subconcepts.map(node => `${node.id} (${node.label || 'No Label'})`).join(', ')
+      : 'None';
+
+    console.log("🔍 Superconcepts:", superconceptsInfo);
+    console.log("🔍 Subconcepts:", subconceptsInfo);
 
     // **Display Node Details**
     d3.select('#selected-node-info').html(`
@@ -197,7 +339,7 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
       console.log('Shortest Path:', path);
 
       if (path.length > 0) {
-        nodeGroup.attr('fill', d => path.includes(d.id) ? 'orange' : GRAPH_CONFIG.node.color);
+        nodeGroup.selectAll("circle").attr('fill', d => path.includes(d.id) ? 'orange' : GRAPH_CONFIG.node.color);
         linkGroup.attr('stroke', link =>
           path.includes(link.source.id) && path.includes(link.target.id) ? 'red' : GRAPH_CONFIG.link.color
         );
@@ -234,7 +376,7 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
 
   // **Reset Graph on Double-click**
   nodeGroup.on('dblclick', () => {
-    nodeGroup.attr('fill', GRAPH_CONFIG.node.color);
+    nodeGroup.selectAll("circle").attr('fill', GRAPH_CONFIG.node.color);
     linkGroup.attr('stroke', GRAPH_CONFIG.link.color);
     d3.select('#selected-node-info').html('Click a node to see its details.');
     d3.select('#shortest-path-display').html('Click two nodes to calculate the shortest path.');
