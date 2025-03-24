@@ -5,7 +5,6 @@
 4. Click "Load JSON File" to visualize your concept lattice.
 5. Optionally, convert custom formats using the "Convert and Download" button if needed.
 
-   ```
 ## 📂 Example dataset
 Save the following as a JSON file (e.g., data/your-dataset.json):
 ```bash
@@ -18,7 +17,6 @@ Save the following as a JSON file (e.g., data/your-dataset.json):
     { "source": "Concept1", "target": "Concept2" }
   ]
 }
-
-ℹ️ Make sure your JSON structure includes both nodes and links. Each node should have an id, label, and level.
 ```
+ℹ️ Make sure your JSON structure includes both nodes and links. Each node should have an id, label, and level.
 
