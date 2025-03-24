@@ -186,10 +186,20 @@ export function createLattice(graphData, options = {}) {
     ...options,
 };
    
-  // Validate graph data
+  // Ensure graphData has valid nodes and links
    if (!graphData || !graphData.nodes || !graphData.links) {
     throw new Error('⚠️Invalid graphData. Ensure it includes nodes and links.');
   }
+
+  // ✅ Modify links before rendering
+  graphData.links.forEach(link => {
+    if (typeof link.source === "string" || typeof link.source === "number") {
+        link.source = graphData.nodes.find(n => n.id == link.source);
+    }
+    if (typeof link.target === "string" || typeof link.target === "number") {
+        link.target = graphData.nodes.find(n => n.id == link.target);
+    }
+});
 
   console.log("📌 Assigning Layers...");
   const layers = assignLayers(graphData);
