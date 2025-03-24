@@ -1,4 +1,15 @@
-const isNodeEnvironment = typeof window === "undefined";
+// src/core/latticeParser.js
+
+/**
+ * Parses a serialized formal concept lattice structure and extracts nodes and links.
+ *
+ * The function processes the given serialized data to generate a concept lattice,
+ * ensuring correct node ordering and hierarchical relationships.
+ * Nodes are assigned increasing IDs, and links are structured from superconcepts (parents) to subconcepts (children).
+ *
+ * @param {Object} SERIALIZED - The serialized lattice data containing objects, properties, context, and lattice structure.
+ * @returns {Object} - An object containing the parsed nodes and links for visualization.
+ */
 
 export function parseSerializedData(SERIALIZED) {
     if (!SERIALIZED || typeof SERIALIZED !== 'object') {
@@ -12,105 +23,63 @@ export function parseSerializedData(SERIALIZED) {
 
     let nodes = [];
     let links = [];
-    let levels = new Map(); // Track levels based on node hierarchy
+    let levels = new Map();
 
-    // Helper function to create formatted labels
-    const createLabel = (extents, intents) => {
-        const extentLabels = extents.map(index => objects[index] || 'Unknown').join(', ');
-        const intentLabels = intents.map(index => properties[index] || 'Unknown').join(', ');
-        return `Extent\n{${extentLabels}}\nIntent\n{${intentLabels}}`;
+    // Compute levels first for all nodes
+    const computeLevels = () => {
+        const computeLevel = (index) => {
+            if (levels.has(index)) return levels.get(index);
+            const [, , upperNeighbors] = lattice[index] || [];
+            if (!upperNeighbors.length) {
+                levels.set(index, 1);
+                return 1;
+            }
+            const maxParentLevel = Math.max(...upperNeighbors.map(neighbor => computeLevel(neighbor)));
+            levels.set(index, maxParentLevel + 1);
+            return maxParentLevel + 1;
+        };
+
+        lattice.forEach((_, index) => computeLevel(index));
     };
 
-    // Compute levels
-    const computeLevel = (index, visited = new Set()) => {
-        if (visited.has(index)) return levels.get(index) || 0; // Avoid cyclic dependencies
-        visited.add(index);
-        const [, , upperNeighbors] = lattice[index];
-        if (!upperNeighbors.length) return 1; // Top-level concept
-        const maxParentLevel = Math.max(...upperNeighbors.map(neighbor => computeLevel(neighbor, visited)));
-        levels.set(index, maxParentLevel + 1);
-        return maxParentLevel + 1;
-    };
+    computeLevels();
 
-    // Creating nodes from lattice data
+    // Get the number of nodes
+    const numNodes = lattice.length;
+
+    // Step 1: Create nodes with reversed IDs and swapped content
     lattice.forEach((entry, index) => {
-        const [extentIndices, intentIndices, upperNeighbors] = entry;
-        const extent = extentIndices.map(i => objects[i]);
-        const intent = intentIndices.map(i => properties[i]);
-        const level = computeLevel(index);
+        if (!Array.isArray(entry) || entry.length < 3) return;
+        const [extentIndices, intentIndices] = entry;
+        const extent = extentIndices.map(i => objects[i] || 'Unknown');
+        const intent = intentIndices.map(i => properties[i] || 'Unknown');
+        const level = levels.get(index) || 1;
+
+        // Reverse ID assignment
+        const reversedId = numNodes - index;
+
         nodes.push({
-            id: index + 1, // 1-based indexing
-            label: createLabel(extentIndices, intentIndices),
+            id: reversedId,
+            label: `Intent\n{${intent.join(", ")}}\nExtent\n{${extent.join(", ")}}`,
             level: level
         });
     });
 
-    // Creating links based on lattice structure
+    // Step 2: Adjust links with reversed IDs and swap direction (parent to child)
     lattice.forEach((entry, index) => {
-        const [, , upperNeighbors, lowerNeighbors] = entry;
-        upperNeighbors.forEach(neighborIndex => {
-            links.push({ source: index + 1, target: neighborIndex + 1 });
-        });
-        lowerNeighbors.forEach(neighborIndex => {
-            links.push({ source: neighborIndex + 1, target: index + 1 });
-        });
-    });
+        if (!Array.isArray(entry) || entry.length < 4) return;
+        const [, , upperNeighbors] = entry;
+        const targetId = numNodes - index; // Reverse ID mapping
 
-    return { nodes, links, context };
-}
-
-/*
-export function loadSerializedFile(input) {
-    return new Promise((resolve, reject) => {
-        if (isNodeEnvironment) {
-            const fs = require("fs");
-            try {
-                if (!fs.existsSync(input)) {
-                    reject(`File not found: ${input}`);
-                    return;
+        if (upperNeighbors) {
+            upperNeighbors.forEach(neighborIndex => {
+                const sourceId = numNodes - neighborIndex; // Reverse ID mapping
+                if (sourceId && targetId) {
+                    links.push({ source: sourceId, target: targetId });
                 }
-                const serializedData = JSON.parse(fs.readFileSync(input, "utf-8"));
-                const parsedData = parseSerializedData(serializedData);
-                resolve(parsedData);
-            } catch (error) {
-                reject(`Error reading file in Node.js: ${error.message}`);
-            }
-        } else {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const serializedData = JSON.parse(event.target.result);
-                    const parsedData = parseSerializedData(serializedData);
-                    resolve(parsedData);
-                } catch (error) {
-                    reject(`Error parsing file in browser: ${error.message}`);
-                }
-            };
-            reader.onerror = () => {
-                reject("Error reading the file in the browser.");
-            };
-            reader.readAsText(input);
+            });
         }
     });
-}
 
-export function saveParsedData(parsedData, output = "parsedLattice.json") {
-    if (isNodeEnvironment) {
-        const fs = require("fs");
-        try {
-            fs.writeFileSync(output, JSON.stringify(parsedData, null, 2));
-            console.log(`Parsed data saved to: ${output}`);
-        } catch (error) {
-            console.error(`Error saving file in Node.js: ${error.message}`);
-        }
-    } else {
-        const blob = new Blob([JSON.stringify(parsedData, null, 2)], { type: "application/json" });
-        const downloadLink = document.createElement("a");
-        downloadLink.href = URL.createObjectURL(blob);
-        downloadLink.download = output;
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-    }
+    return { nodes, links };
 }
-*/
