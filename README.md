@@ -53,7 +53,7 @@ You can test the library by running the provided examples.
      ```
    - Navigate to the `examples` directory and run:
      ```bash
-     live-server examples/basic-example
+     live-server examples/frontpage
      ```
      OR
      Serve the project from the root directory by:
