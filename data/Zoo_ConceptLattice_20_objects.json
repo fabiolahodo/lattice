@@ -1,0 +1,652 @@
+{
+  "nodes": [
+    {
+      "id": 46,
+      "label": "Intent\n{hair, feathers, eggs, milk, airborne, aquatic, predator, toothed, backbone, breathes, venomous, fins, tail, domestic, catsize}\nExtent\n{}",
+      "level": 8
+    },
+    {
+      "id": 45,
+      "label": "Intent\n{hair, milk, toothed, backbone, breathes, tail, domestic, catsize}\nExtent\n{calf}",
+      "level": 7
+    },
+    {
+      "id": 44,
+      "label": "Intent\n{eggs, aquatic, toothed, backbone, fins, tail, domestic}\nExtent\n{carp}",
+      "level": 6
+    },
+    {
+      "id": 43,
+      "label": "Intent\n{feathers, eggs, airborne, backbone, breathes, tail, domestic}\nExtent\n{chicken}",
+      "level": 6
+    },
+    {
+      "id": 42,
+      "label": "Intent\n{feathers, eggs, airborne, predator, backbone, breathes, tail}\nExtent\n{crow}",
+      "level": 6
+    },
+    {
+      "id": 41,
+      "label": "Intent\n{eggs, aquatic, predator, toothed, backbone, fins, tail, catsize}\nExtent\n{dogfish}",
+      "level": 7
+    },
+    {
+      "id": 40,
+      "label": "Intent\n{hair, milk, predator, toothed, backbone, breathes, tail, catsize}\nExtent\n{boar, cheetah}",
+      "level": 7
+    },
+    {
+      "id": 39,
+      "label": "Intent\n{toothed, backbone, tail, domestic}\nExtent\n{calf, carp}",
+      "level": 5
+    },
+    {
+      "id": 38,
+      "label": "Intent\n{hair, milk, toothed, backbone, breathes, domestic}\nExtent\n{calf, cavy}",
+      "level": 5
+    },
+    {
+      "id": 37,
+      "label": "Intent\n{backbone, breathes, tail, domestic}\nExtent\n{calf, chicken}",
+      "level": 5
+    },
+    {
+      "id": 36,
+      "label": "Intent\n{eggs, backbone, tail, domestic}\nExtent\n{carp, chicken}",
+      "level": 5
+    },
+    {
+      "id": 35,
+      "label": "Intent\n{feathers, eggs, airborne, backbone, breathes, tail}\nExtent\n{chicken, crow}",
+      "level": 5
+    },
+    {
+      "id": 34,
+      "label": "Intent\n{predator, backbone, breathes, tail}\nExtent\n{boar, cheetah, crow}",
+      "level": 5
+    },
+    {
+      "id": 33,
+      "label": "Intent\n{predator, toothed, backbone, tail, catsize}\nExtent\n{boar, cheetah, dogfish}",
+      "level": 6
+    },
+    {
+      "id": 32,
+      "label": "Intent\n{toothed, backbone, domestic}\nExtent\n{calf, carp, cavy}",
+      "level": 4
+    },
+    {
+      "id": 31,
+      "label": "Intent\n{backbone, tail, domestic}\nExtent\n{calf, carp, chicken}",
+      "level": 4
+    },
+    {
+      "id": 30,
+      "label": "Intent\n{backbone, breathes, domestic}\nExtent\n{calf, cavy, chicken}",
+      "level": 4
+    },
+    {
+      "id": 29,
+      "label": "Intent\n{hair, milk, predator, toothed, backbone, breathes, catsize}\nExtent\n{aardvark, bear, boar, cheetah}",
+      "level": 6
+    },
+    {
+      "id": 28,
+      "label": "Intent\n{eggs, aquatic, predator, toothed, backbone, fins, tail}\nExtent\n{bass, catfish, chub, dogfish}",
+      "level": 6
+    },
+    {
+      "id": 27,
+      "label": "Intent\n{backbone, domestic}\nExtent\n{calf, carp, cavy, chicken}",
+      "level": 3
+    },
+    {
+      "id": 26,
+      "label": "Intent\n{predator, backbone, breathes}\nExtent\n{aardvark, bear, boar, cheetah, crow}",
+      "level": 4
+    },
+    {
+      "id": 25,
+      "label": "Intent\n{predator, toothed, backbone, catsize}\nExtent\n{aardvark, bear, boar, cheetah, dogfish}",
+      "level": 5
+    },
+    {
+      "id": 24,
+      "label": "Intent\n{eggs, aquatic, toothed, backbone, fins, tail}\nExtent\n{bass, carp, catfish, chub, dogfish}",
+      "level": 5
+    },
+    {
+      "id": 23,
+      "label": "Intent\n{eggs, predator, backbone, tail}\nExtent\n{bass, catfish, chub, crow, dogfish}",
+      "level": 5
+    },
+    {
+      "id": 22,
+      "label": "Intent\n{hair, milk, toothed, backbone, breathes, tail, catsize}\nExtent\n{antelope, boar, buffalo, calf, cheetah, deer}",
+      "level": 6
+    },
+    {
+      "id": 21,
+      "label": "Intent\n{predator, toothed, backbone, tail}\nExtent\n{bass, boar, catfish, cheetah, chub, dogfish}",
+      "level": 5
+    },
+    {
+      "id": 20,
+      "label": "Intent\n{eggs, aquatic, predator}\nExtent\n{bass, catfish, chub, crab, crayfish, dogfish}",
+      "level": 4
+    },
+    {
+      "id": 19,
+      "label": "Intent\n{toothed, backbone, tail, catsize}\nExtent\n{antelope, boar, buffalo, calf, cheetah, deer, dogfish}",
+      "level": 5
+    },
+    {
+      "id": 18,
+      "label": "Intent\n{predator, backbone, tail}\nExtent\n{bass, boar, catfish, cheetah, chub, crow, dogfish}",
+      "level": 4
+    },
+    {
+      "id": 17,
+      "label": "Intent\n{eggs, backbone, tail}\nExtent\n{bass, carp, catfish, chicken, chub, crow, dogfish}",
+      "level": 4
+    },
+    {
+      "id": 16,
+      "label": "Intent\n{eggs, aquatic}\nExtent\n{bass, carp, catfish, chub, crab, crayfish, dogfish}",
+      "level": 3
+    },
+    {
+      "id": 15,
+      "label": "Intent\n{hair, milk, toothed, backbone, breathes, catsize}\nExtent\n{aardvark, antelope, bear, boar, buffalo, calf, cheetah, deer}",
+      "level": 5
+    },
+    {
+      "id": 14,
+      "label": "Intent\n{predator, toothed, backbone}\nExtent\n{aardvark, bass, bear, boar, catfish, cheetah, chub, dogfish}",
+      "level": 4
+    },
+    {
+      "id": 13,
+      "label": "Intent\n{backbone, breathes, tail}\nExtent\n{antelope, boar, buffalo, calf, cheetah, chicken, crow, deer}",
+      "level": 4
+    },
+    {
+      "id": 12,
+      "label": "Intent\n{eggs, predator}\nExtent\n{bass, catfish, chub, clam, crab, crayfish, crow, dogfish}",
+      "level": 3
+    },
+    {
+      "id": 11,
+      "label": "Intent\n{hair, milk, toothed, backbone, breathes}\nExtent\n{aardvark, antelope, bear, boar, buffalo, calf, cavy, cheetah, deer}",
+      "level": 4
+    },
+    {
+      "id": 10,
+      "label": "Intent\n{toothed, backbone, catsize}\nExtent\n{aardvark, antelope, bear, boar, buffalo, calf, cheetah, deer, dogfish}",
+      "level": 4
+    },
+    {
+      "id": 9,
+      "label": "Intent\n{predator, backbone}\nExtent\n{aardvark, bass, bear, boar, catfish, cheetah, chub, crow, dogfish}",
+      "level": 3
+    },
+    {
+      "id": 8,
+      "label": "Intent\n{eggs}\nExtent\n{bass, carp, catfish, chicken, chub, clam, crab, crayfish, crow, dogfish}",
+      "level": 2
+    },
+    {
+      "id": 7,
+      "label": "Intent\n{backbone, breathes}\nExtent\n{aardvark, antelope, bear, boar, buffalo, calf, cavy, cheetah, chicken, crow, deer}",
+      "level": 3
+    },
+    {
+      "id": 6,
+      "label": "Intent\n{toothed, backbone, tail}\nExtent\n{antelope, bass, boar, buffalo, calf, carp, catfish, cheetah, chub, deer, dogfish}",
+      "level": 4
+    },
+    {
+      "id": 5,
+      "label": "Intent\n{predator}\nExtent\n{aardvark, bass, bear, boar, catfish, cheetah, chub, clam, crab, crayfish, crow, dogfish}",
+      "level": 2
+    },
+    {
+      "id": 4,
+      "label": "Intent\n{backbone, tail}\nExtent\n{antelope, bass, boar, buffalo, calf, carp, catfish, cheetah, chicken, chub, crow, deer, dogfish}",
+      "level": 3
+    },
+    {
+      "id": 3,
+      "label": "Intent\n{toothed, backbone}\nExtent\n{aardvark, antelope, bass, bear, boar, buffalo, calf, carp, catfish, cavy, cheetah, chub, deer, dogfish}",
+      "level": 3
+    },
+    {
+      "id": 2,
+      "label": "Intent\n{backbone}\nExtent\n{aardvark, antelope, bass, bear, boar, buffalo, calf, carp, catfish, cavy, cheetah, chicken, chub, crow, deer, dogfish}",
+      "level": 2
+    },
+    {
+      "id": 1,
+      "label": "Intent\n{}\nExtent\n{aardvark, antelope, bass, bear, boar, buffalo, calf, carp, catfish, cavy, cheetah, chicken, chub, clam, crab, crayfish, crow, deer, dogfish}",
+      "level": 1
+    }
+  ],
+  "links": [
+    {
+      "source": 45,
+      "target": 46
+    },
+    {
+      "source": 44,
+      "target": 46
+    },
+    {
+      "source": 43,
+      "target": 46
+    },
+    {
+      "source": 42,
+      "target": 46
+    },
+    {
+      "source": 41,
+      "target": 46
+    },
+    {
+      "source": 40,
+      "target": 46
+    },
+    {
+      "source": 39,
+      "target": 45
+    },
+    {
+      "source": 38,
+      "target": 45
+    },
+    {
+      "source": 37,
+      "target": 45
+    },
+    {
+      "source": 22,
+      "target": 45
+    },
+    {
+      "source": 39,
+      "target": 44
+    },
+    {
+      "source": 36,
+      "target": 44
+    },
+    {
+      "source": 24,
+      "target": 44
+    },
+    {
+      "source": 37,
+      "target": 43
+    },
+    {
+      "source": 36,
+      "target": 43
+    },
+    {
+      "source": 35,
+      "target": 43
+    },
+    {
+      "source": 35,
+      "target": 42
+    },
+    {
+      "source": 34,
+      "target": 42
+    },
+    {
+      "source": 23,
+      "target": 42
+    },
+    {
+      "source": 33,
+      "target": 41
+    },
+    {
+      "source": 28,
+      "target": 41
+    },
+    {
+      "source": 34,
+      "target": 40
+    },
+    {
+      "source": 33,
+      "target": 40
+    },
+    {
+      "source": 29,
+      "target": 40
+    },
+    {
+      "source": 22,
+      "target": 40
+    },
+    {
+      "source": 32,
+      "target": 39
+    },
+    {
+      "source": 31,
+      "target": 39
+    },
+    {
+      "source": 6,
+      "target": 39
+    },
+    {
+      "source": 32,
+      "target": 38
+    },
+    {
+      "source": 30,
+      "target": 38
+    },
+    {
+      "source": 11,
+      "target": 38
+    },
+    {
+      "source": 31,
+      "target": 37
+    },
+    {
+      "source": 30,
+      "target": 37
+    },
+    {
+      "source": 13,
+      "target": 37
+    },
+    {
+      "source": 31,
+      "target": 36
+    },
+    {
+      "source": 17,
+      "target": 36
+    },
+    {
+      "source": 17,
+      "target": 35
+    },
+    {
+      "source": 13,
+      "target": 35
+    },
+    {
+      "source": 26,
+      "target": 34
+    },
+    {
+      "source": 18,
+      "target": 34
+    },
+    {
+      "source": 13,
+      "target": 34
+    },
+    {
+      "source": 25,
+      "target": 33
+    },
+    {
+      "source": 21,
+      "target": 33
+    },
+    {
+      "source": 19,
+      "target": 33
+    },
+    {
+      "source": 27,
+      "target": 32
+    },
+    {
+      "source": 3,
+      "target": 32
+    },
+    {
+      "source": 27,
+      "target": 31
+    },
+    {
+      "source": 4,
+      "target": 31
+    },
+    {
+      "source": 27,
+      "target": 30
+    },
+    {
+      "source": 7,
+      "target": 30
+    },
+    {
+      "source": 26,
+      "target": 29
+    },
+    {
+      "source": 25,
+      "target": 29
+    },
+    {
+      "source": 15,
+      "target": 29
+    },
+    {
+      "source": 24,
+      "target": 28
+    },
+    {
+      "source": 23,
+      "target": 28
+    },
+    {
+      "source": 21,
+      "target": 28
+    },
+    {
+      "source": 20,
+      "target": 28
+    },
+    {
+      "source": 2,
+      "target": 27
+    },
+    {
+      "source": 9,
+      "target": 26
+    },
+    {
+      "source": 7,
+      "target": 26
+    },
+    {
+      "source": 14,
+      "target": 25
+    },
+    {
+      "source": 10,
+      "target": 25
+    },
+    {
+      "source": 17,
+      "target": 24
+    },
+    {
+      "source": 16,
+      "target": 24
+    },
+    {
+      "source": 6,
+      "target": 24
+    },
+    {
+      "source": 18,
+      "target": 23
+    },
+    {
+      "source": 17,
+      "target": 23
+    },
+    {
+      "source": 12,
+      "target": 23
+    },
+    {
+      "source": 19,
+      "target": 22
+    },
+    {
+      "source": 15,
+      "target": 22
+    },
+    {
+      "source": 13,
+      "target": 22
+    },
+    {
+      "source": 18,
+      "target": 21
+    },
+    {
+      "source": 14,
+      "target": 21
+    },
+    {
+      "source": 6,
+      "target": 21
+    },
+    {
+      "source": 16,
+      "target": 20
+    },
+    {
+      "source": 12,
+      "target": 20
+    },
+    {
+      "source": 10,
+      "target": 19
+    },
+    {
+      "source": 6,
+      "target": 19
+    },
+    {
+      "source": 9,
+      "target": 18
+    },
+    {
+      "source": 4,
+      "target": 18
+    },
+    {
+      "source": 8,
+      "target": 17
+    },
+    {
+      "source": 4,
+      "target": 17
+    },
+    {
+      "source": 8,
+      "target": 16
+    },
+    {
+      "source": 11,
+      "target": 15
+    },
+    {
+      "source": 10,
+      "target": 15
+    },
+    {
+      "source": 9,
+      "target": 14
+    },
+    {
+      "source": 3,
+      "target": 14
+    },
+    {
+      "source": 7,
+      "target": 13
+    },
+    {
+      "source": 4,
+      "target": 13
+    },
+    {
+      "source": 8,
+      "target": 12
+    },
+    {
+      "source": 5,
+      "target": 12
+    },
+    {
+      "source": 7,
+      "target": 11
+    },
+    {
+      "source": 3,
+      "target": 11
+    },
+    {
+      "source": 3,
+      "target": 10
+    },
+    {
+      "source": 5,
+      "target": 9
+    },
+    {
+      "source": 2,
+      "target": 9
+    },
+    {
+      "source": 1,
+      "target": 8
+    },
+    {
+      "source": 2,
+      "target": 7
+    },
+    {
+      "source": 4,
+      "target": 6
+    },
+    {
+      "source": 3,
+      "target": 6
+    },
+    {
+      "source": 1,
+      "target": 5
+    },
+    {
+      "source": 2,
+      "target": 4
+    },
+    {
+      "source": 2,
+      "target": 3
+    },
+    {
+      "source": 1,
+      "target": 2
+    }
+  ]
+}

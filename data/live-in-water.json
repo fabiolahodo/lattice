@@ -16,7 +16,8 @@
         {"id": "14", "label": "Extent\n{reed, corn}\nIntent{needs water to live, live on land, needs chlorophyl, monocotyledon}", "level": 4},
         {"id": "15", "label": "Extent\n{frog}\nIntent{needs water to live, lives in water, live on land, can move, has limbs}", "level": 5},
         {"id": "16", "label": "Extent\n{dog}\nIntent{needs water to live, live on land, can move, has limbs, breast feeds}", "level": 5},
-        {"id": "17", "label": "Extent\n{}\nIntent{needs water to live, lives in water, live on land, needs chlorophyl, dicotyledon, monocotyledon, can move, has limbs, breast feeds}", "level": 6}
+        {"id": "17", "label": "Extent\n{reed}\nIntent{needs water to live, needs chlorophyl, live on land, lives in water, can move }", "level": 5},
+        {"id": "18", "label": "Extent\n{}\nIntent{needs water to live, lives in water, live on land, needs chlorophyl, dicotyledon, monocotyledon, can move, has limbs, breast feeds}", "level": 6}
     ],
     "links": [
         {"source": "1", "target": "2"},
@@ -44,7 +45,9 @@
         {"source": "12", "target": "17"},
         {"source": "13", "target": "17"},
         {"source": "14", "target": "16"},
-        {"source": "15", "target": "17"},
-        {"source": "16", "target": "17"}
+        {"source": "14", "target": "17"},
+        {"source": "15", "target": "18"},
+        {"source": "16", "target": "18"},
+        {"source": "17", "target": "18"}
     ]
 }
