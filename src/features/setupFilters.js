@@ -13,9 +13,10 @@ export function setupFilterControls(originalGraphData) {
   const objectFilterInput = document.getElementById('object-filter');
   const attributeFilterInput = document.getElementById('attribute-filter');
   const applyFiltersButton = document.getElementById('apply-filters');
+  const labelingModeSelector = document.getElementById('labeling-mode');
 
-  if (!objectFilterInput || !attributeFilterInput || !applyFiltersButton) {
-    console.error('Filter controls are missing in the DOM.');
+  if (!objectFilterInput || !attributeFilterInput || !applyFiltersButton || !labelingModeSelector) {
+    console.error('Filter controls or labeling mode selector are missing in the DOM.');
     return;
   }
 
@@ -33,7 +34,9 @@ export function setupFilterControls(originalGraphData) {
       .map((item) => item.trim())
       .filter((item) => item !== '');
 
-    console.log('Filter Criteria:', { objectFilter, attributeFilter });
+    const selectedLabelingMode = labelingModeSelector.value;
+    
+    console.log('Filter Criteria:', { objectFilter, attributeFilter, selectedLabelingMode });
 
     try {
       // Highlight nodes based on the specified filters
@@ -45,8 +48,16 @@ export function setupFilterControls(originalGraphData) {
       // Re-render the lattice visualization with the updated colors
       createLattice(updatedData, { container: '#graph-container' });
 
+       // After graph created, update labels according to mode
+       if (typeof window.updateLabels === "function") {
+        window.updateLabels(selectedLabelingMode);
+      } else {
+        console.error('updateLabels function is not defined.');
+      }
+
       // Update the legend
       updateLegend();
+      
     } catch (error) {
       console.error('Error during filtering:', error);
     }
