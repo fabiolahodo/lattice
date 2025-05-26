@@ -3,8 +3,8 @@
 
 export const GRAPH_CONFIG = {
     dimensions: {
-      width: 800, // Default width of the graph
-      height: 600, // Default height of the graph
+      width: 1600, // Default width of the graph
+      height: 800, // Default height of the graph
       padding: 50, // Padding around the graph
     },
     node: {
