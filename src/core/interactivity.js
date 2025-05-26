@@ -68,39 +68,6 @@ export function computeSuperSubConcepts(graphData) {
 
 }
 
-
-/*
-export function computeSuperSubConcepts(graphData) {
-  if (!graphData || !Array.isArray(graphData.nodes) || !Array.isArray(graphData.links)) {
-    console.error("❌ computeSuperSubConcepts received invalid graphData:", graphData);
-    return;
-  }
-  console.log("✅ computeSuperSubConcepts received:", graphData.nodes.length, "nodes and", graphData.links.length, "links");
-
-  graphData.nodes.forEach(node => {
-    if (!Array.isArray(node.superconcepts)) node.superconcepts = [];
-    if (!Array.isArray(node.subconcepts)) node.subconcepts = [];
-  });
-
-  graphData.links.forEach(link => {
-    let sourceNode = graphData.nodes.find(n => n.id == link.source);
-    let targetNode = graphData.nodes.find(n => n.id == link.target);
-
-    if (!sourceNode || !targetNode) {
-      console.warn(`⚠️ Link references invalid nodes:`, link);
-      return;
-    }
-
-    if (!sourceNode.subconcepts.some(n => n.id === targetNode.id)) {
-      sourceNode.subconcepts.push(targetNode);
-    }
-    if (!targetNode.superconcepts.some(n => n.id === sourceNode.id)) {
-      targetNode.superconcepts.push(sourceNode);
-    }
-  });
-}
-*/
-
 /**
  * Updates link positions when nodes move.
  * @param {Object} graphData - The graph data containing nodes and links.
@@ -160,7 +127,7 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
 
   // Drag Behavior
   nodeGroup.call(d3.drag()
-   .on("start", (event, d) => {
+   .on("start", function(event, d) {
       d3.select(this).raise();// Bring the dragged node to the front
     })
     .on("drag",function(event, d){
@@ -181,41 +148,13 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
 
       // ✅ Update edges dynamically
        updateLinks(graphData);
-/*
-      // ✅ Ensure linked edges move in real-time
-    d3.selectAll(".link")
-    .filter(link => link.source === d || link.target === d)
-    .attr("x1", link => link.source.x)
-    .attr("y1", link => link.source.y)
-    .attr("x2", link => link.target.x)
-    .attr("y2", link => link.target.y);
-
-    updateNodes(graphData); // Ensure all elements update
-  */
     })
-    /*.on("end", () => {   
-      updateNodes(graphData); // ✅ Pass `graphData` when calling updateNodes
-    
-    })
-    */
     .on("end", (event, d) => {
         //mouseupHandler(event, d);
         updateNodes(graphData);
     })
     
   );
-/*
-  function mouseupHandler(event, d) {
-    d3.select(this).classed("dragging", false);
-
-    if (!graphData) {
-        console.error("❌ graphData is not defined in mouseupHandler!");
-        return;
-    }
-
-    updateNodes(graphData);
-}
-*/
 
   // **Click-to-Zoom & Highlight Node**
   nodeGroup.on('click', function (event, clickedNode) {
@@ -227,12 +166,14 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
       return;
   }
 
+
     const svg = d3.select("svg");
-    if (!zoomBehavior) {
+    if (!svg) return;
+   if (!zoomBehavior) {
       console.error("❌ zoomBehavior is not initialized!");
       return;
     }
-
+  
     const newScale = 2.5;
     const newX = -clickedNode.x * newScale + svg.attr('width') / 2;
     const newY = -clickedNode.y * newScale + svg.attr('height') / 2;
@@ -244,28 +185,32 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
     // ✅ Highlight clicked node and reset others
     nodeGroup.selectAll("circle")
         .attr("fill", d => d.id === clickedNode.id ? GRAPH_CONFIG.node.selectedColor : GRAPH_CONFIG.node.color);
-
-    /*
-     // Highlight clicked node and connected links
-     nodeGroup.attr('fill', (node) =>
-        node.id === clickedNode.id
-            ? GRAPH_CONFIG.node.selectedColor
-            : GRAPH_CONFIG.node.color
-    );
-    
-
-    // **Highlight the Selected Node**
-    nodeGroup.attr("fill", GRAPH_CONFIG.node.color); // Reset all nodes to default color
-    d3.select(this).attr("fill", GRAPH_CONFIG.node.selectedColor); // Highlight the clicked node
-    
-    */
    
     // **Highlight Links connected to the Selected Node**
     if (!linkGroup || linkGroup.size() === 0) {
+      //if (!linkGroup || linkGroup.empty()) {
       console.error("❌ linkGroup is not initialized properly. Cannot update link styles.");
       return;
   }
 
+   // Highlight connected links
+   linkGroup
+      .attr('stroke', d => {
+        const sourceId = d.source.id !== undefined ? d.source.id : d.source;
+        const targetId = d.target.id !== undefined ? d.target.id : d.target;
+        return (sourceId === clickedNode.id || targetId === clickedNode.id)
+          ? GRAPH_CONFIG.link.highlightedColor
+          : GRAPH_CONFIG.link.color;
+      })
+      .attr('stroke-width', d => {
+        const sourceId = d.source.id !== undefined ? d.source.id : d.source;
+        const targetId = d.target.id !== undefined ? d.target.id : d.target;
+        return (sourceId === clickedNode.id || targetId === clickedNode.id)
+          ? 5
+          : GRAPH_CONFIG.link.thickness;
+      });
+
+  /*
   linkGroup
       .attr("stroke", d => {
         const srcId = d.source?.id ?? d.source;
@@ -277,6 +222,7 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
         const tgtId = d.target?.id ?? d.target;
         return (srcId === clickedNode.id || tgtId === clickedNode.id) ? 6 : GRAPH_CONFIG.link.thickness;
       });
+    */
 
   /*
     linkGroup
@@ -298,15 +244,6 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
     }
 
     // **Format Superconcepts & Subconcepts**
-    
-    /*const superconceptsInfo = clickedNode.superconcepts
-        .map((node) => `${node.id} (${node.label || 'No Label'})`)
-        .join(', ') || 'None';
-    const subconceptsInfo = clickedNode.subconcepts
-        .map((node) => `${node.id} (${node.label || 'No Label'})`)
-        .join(', ') || 'None';
-    */
-
   const superconceptsInfo = clickedNode.superconcepts && clickedNode.superconcepts.length > 0
     ? clickedNode.superconcepts.map(node => `${node.id} (${node.label || 'No Label'})`).join(', ')
     : 'None';
@@ -338,12 +275,34 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
       const path = findShortestPath(graphData, selectedNodes[0], selectedNodes[1]);
       console.log('Shortest Path:', path);
 
-      if (path.length > 0) {
-        nodeGroup.selectAll("circle").attr('fill', d => path.includes(d.id) ? 'orange' : GRAPH_CONFIG.node.color);
+      /*if (path.length > 0) {
+        nodeGroup.selectAll("circle")
+        .attr('fill', d => path.includes(d.id) ? 'orange' : GRAPH_CONFIG.node.color);
+        
         linkGroup.attr('stroke', link =>
           path.includes(link.source.id) && path.includes(link.target.id) ? 'red' : GRAPH_CONFIG.link.color
         );
+      */
 
+        if (path.length > 0) {
+          nodeGroup.selectAll("circle")
+            .attr('fill', d => path.includes(d.id) ? 'orange' : GRAPH_CONFIG.node.color);
+  
+          linkGroup
+            .attr('stroke', d => {
+              const srcId = d.source.id !== undefined ? d.source.id : d.source;
+              const tgtId = d.target.id !== undefined ? d.target.id : d.target;
+              return (path.includes(srcId) && path.includes(tgtId))
+                ? 'red'
+                : GRAPH_CONFIG.link.color;
+            })
+            .attr('stroke-width', d => {
+              const srcId = d.source.id !== undefined ? d.source.id : d.source;
+              const tgtId = d.target.id !== undefined ? d.target.id : d.target;
+              return (path.includes(srcId) && path.includes(tgtId))
+                ? 5
+                : GRAPH_CONFIG.link.thickness;
+            });
         d3.select('#shortest-path-display').html(`
           Shortest path between <strong>${selectedNodes[0]}</strong> and <strong>${selectedNodes[1]}</strong>: 
           ${path.join(' → ')}
@@ -377,7 +336,7 @@ export function addNodeInteractivity(nodeGroup, linkGroup, graphData) {
   // **Reset Graph on Double-click**
   nodeGroup.on('dblclick', () => {
     nodeGroup.selectAll("circle").attr('fill', GRAPH_CONFIG.node.color);
-    linkGroup.attr('stroke', GRAPH_CONFIG.link.color);
+    linkGroup.attr('stroke', GRAPH_CONFIG.link.color).attr('stroke-width', GRAPH_CONFIG.link.thickness);
     d3.select('#selected-node-info').html('Click a node to see its details.');
     d3.select('#shortest-path-display').html('Click two nodes to calculate the shortest path.');
   });
