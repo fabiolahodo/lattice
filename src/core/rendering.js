@@ -65,11 +65,12 @@ export function renderGraph(container, graphData, options) {
     });
 
     console.log("📌 Assigning X & Y positions...");
+   
     layers.forEach((layer, layerIndex) => {
         const xSpacing = (width - 2 * padding) / (layer.length + 1);
         layer.forEach((node, nodeIndex) => {
             node.x = padding + (nodeIndex + 1) * xSpacing;
-            //node.y = padding + layerIndex * (height / layers.length);
+            node.y = padding + layerIndex * (height / layers.length);
         });
     });
 
@@ -111,9 +112,12 @@ export function renderGraph(container, graphData, options) {
         .attr('class', 'graph-transform');
 
     console.log("📌 Drawing Links...");
-    linkGroup = g.append("g")
-        .attr("class", "link-group")
-        .selectAll('.link')
+    const linkContainer = g.append("g").attr("class", "link-group");
+    //linkGroup = g.append("g")
+    linkGroup = linkContainer
+        //.attr("class", "link-group")
+        //.selectAll('.link')
+        .selectAll('line')
         .data(graphData.links)
         //.data(graphData.links, d => d.source.id + '-' + d.target.id) // Ensure links are correctly bound
         //.enter()
@@ -228,8 +232,9 @@ export function renderGraph(container, graphData, options) {
 
     labelGroup = d3.selectAll(".node-label-group");
 
-    // Apply default label mode
-    updateLabels("default", labelGroup);
+    // Apply currently selected label mode from dropdown
+    const selectedMode = document.getElementById("labeling-mode")?.value || "id";
+    updateLabels(selectedMode, labelGroup);
 
     console.log("📌 Adjusting Graph Centering...");
     setTimeout(() => {
