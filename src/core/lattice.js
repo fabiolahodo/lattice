@@ -10,7 +10,7 @@ import { calculateMetrics } from './metrics.js';
 import { computeCanonicalBase } from './canonicalBase.js';
 import { setupFilterControls } from '../features/setupFilters.js'; 
 import { computeReducedLabels, formatLabel } from './reducedLabeling.js';
-import { assignLayers, orderVerticesWithinLayers } from './layering.js';
+import { assignLayers, orderVerticesWithinLayers, adjustNodePositions } from './layering.js';
 import { exportAsJSON, exportAsPNG, exportAsCSV, exportAsPDF } from '../features/export.js';
 
 
@@ -217,7 +217,7 @@ orderVerticesWithinLayers(layers, graphData);  // Optimize horizontal positionin
     const xSpacing = (width - 2 * GRAPH_CONFIG.dimensions.padding) / (layer.length + 1);
       layer.forEach((node, nodeIndex) => {
           node.y = GRAPH_CONFIG.dimensions.padding + layerIndex * layerSpacing; // Assign vertical spacing based on layer index
-          node.x = GRAPH_CONFIG.dimensions.padding +(nodeIndex + 1) * xSpacing; // Horizontal spacing
+          //node.x = GRAPH_CONFIG.dimensions.padding +(nodeIndex + 1) * xSpacing; // Horizontal spacing
           //node.layer = layerIndex; // Add layer information for constraints
       });
   });
@@ -225,6 +225,9 @@ orderVerticesWithinLayers(layers, graphData);  // Optimize horizontal positionin
 
   console.log("📌 Computing Superconcepts and Subconcepts...");
   computeSuperSubConcepts(graphData);  // Ensure correct hierarchical relationships
+
+  // ✅ Spread nodes horizontally based on parent alignment
+adjustNodePositions(layers, width, GRAPH_CONFIG.dimensions.padding);
 
   // ✅ Compute reduced labels before rendering
   computeReducedLabels(graphData.nodes, graphData.links);
@@ -409,3 +412,4 @@ export function filterLattice(graphData, filterCriteria) {
   // Return the filtered graph data with updated nodes and links
   return { nodes: filteredNodes, links: filteredLinks };
 }
+
