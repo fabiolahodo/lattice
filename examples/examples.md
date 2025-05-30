@@ -16,6 +16,6 @@ Below are two concept lattices derived from the same formal context. The left sh
 
 | Default Labeling | Reduced Labeling |
 |------------------|------------------|
-| ![Default Labeling](./screenshots/gender-age.jpg) | ![Reduced Labeling](./screenshots/gender-age-reduced-labeling.png) |
+| ![Default Labeling](./screenshots/gender-age.jpg) | ![Reduced Labeling](./screenshots/gender-age reduced labeling.png) |
 
 
