@@ -9,7 +9,7 @@ This page showcases a set of example visualizations and use cases using `lattice
 2. [Building Regulations](#-example-2-building-regulations)
 3. [Life in Water](#-example-3-life-in-water)
 4. [Linguistic Features from `concepts`](#-example-4-parsed-json-example-from-concepts-library)
-5. [Zoo Dataset (Large Lattice)](#example-5-zoo-dataset-large-concept-lattice)
+5. [Zoo Dataset (Large Lattice)](#-example-5-zoo-dataset-large-concept-lattice)
    
 
 
