@@ -67,6 +67,10 @@ In this view, nodes are color-coded based on filtering results:
 - 🟢 **Green**: match in extent only  
 - ⚫ **Grey**: match in intent only
 
+  <div align="center">
+  <img src="./screenshots/live-in-water.png" alt="Live in Water" width="550"/>
+</div>
+
 ![Life in Water](./screenshots/live-in-water.png)
 
 ## 🔹 Example 4: Life in Water Parsed JSON Example from `concepts` Library
@@ -87,7 +91,10 @@ The following table shows the original binary relation between personal pronouns
 ---
 The following concept lattice was automatically generated using our `lattice.js` parser, successfully converting the original `concepts` JSON format into our internal structure:
 
-<img src="./screenshots/int.png" alt="Lattice for Parsed JSON" width="550"/>
+<div align="center">
+  <img src="./screenshots/int.png" alt="Lattice for Parsed JSON" width="550"/>
+</div>
+
 
 ---
 
