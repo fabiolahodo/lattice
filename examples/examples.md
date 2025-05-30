@@ -3,6 +3,16 @@
 
 This page showcases a set of example visualizations and use cases using `lattice.js`. These examples demonstrate different labeling modes, filtering, and layout strategies supported by the library.
 
+## 📚 Example Overview
+
+1. [Gender-Age Context](#-example-1-basic-lattice-gender-age-example)
+2. [Building Regulations](#-example-2-building-regulations)
+3. [Life in Water](#-example-3-life-in-water)
+4. [Linguistic Features from `concepts`](#-example-4-parsed-json-example-from-concepts-library)
+5. [Zoo Dataset (Large Lattice)](#example-5-zoo-dataset-large-concept-lattice)
+   
+
+
 ## 🔹 Example 1: Basic Lattice gender-age example
 
 |        | Female | Juvenile | Adult | Male |
@@ -18,6 +28,7 @@ Below are two concept lattices derived from the same formal context. The left sh
 |------------------|------------------|
 | ![Default Labeling](./screenshots/gender-age-full-labeling.png) | ![Reduced Labeling](./screenshots/gender-age-reduced-labeling.png)|
 
+---
 ## 🔹 Example 2: Building Regulations
 
 |       | roof | stairs | stairwell | windows | chimney | cellar<br>floor | fire<br>door | foundation | front<br>door |
@@ -44,6 +55,7 @@ In this view, nodes are color-coded based on filtering results:
 |------------------|-------------------------------|
 | ![Default](./screenshots/law-regulations-for-buildings.jpg) | ![Filtered](./screenshots/law-regulations-for-buildings-filter-(15-roof)-tooltip.png) |
 
+---
 ## 🔹 Example 3: Life in Water
 
 The following formal context relates to biological traits of animals and plants, including movement, habitat, and reproduction.
@@ -71,9 +83,8 @@ In this view, nodes are color-coded based on filtering results:
   <img src="./screenshots/live-in-water.png" alt="Live in Water" width="550"/>
 </div>
 
-![Life in Water](./screenshots/live-in-water.png)
-
-## 🔹 Example 4: Life in Water Parsed JSON Example from `concepts` Library
+---
+## 🔹 Example 4: Parsed JSON Example from `concepts` Library
 
 This example is taken directly from the [concepts Python library documentation](https://concepts.readthedocs.io/en/stable/examples.html#example-json), demonstrating a formal context for linguistic agreement features (person, number, polarity).
 
@@ -100,4 +111,23 @@ The following concept lattice was automatically generated using our `lattice.js`
 
 ✅ This confirms compatibility between `lattice.js` and external FCA tools like the `concepts` Python library.
 
+---
+## 🔹 Example 5: 🦓 Zoo Dataset: Large Concept Lattice
+
+This example uses the [UCI Zoo dataset](https://archive.ics.uci.edu/dataset/111/zoo), which contains binary attributes for 80 animal species. The formal context was constructed by converting these attributes into a cross-table suitable for Formal Concept Analysis (FCA).
+
+The generated concept lattice demonstrates the ability of `lattice.js` to handle large structures with multiple overlapping layers and a high density of concepts.
+
+📊 **Dataset Statistics**
+- **Total Concepts**: 214
+- **Total Objects**: 80
+- **Total Attributes**: 15
+
+📷 **Visualization**
+
+<div align="center">
+  <img src="./screenshots/zoo-80x15.png" alt="Zoo concept lattice" width="850"/>
+</div>
+
+This example highlights the need for advanced features like reduced labeling, edge bundling, and zoom controls when visualizing dense lattices. It also shows that `lattice.js` remains responsive and readable even when scaled to over 200 concepts.
 
