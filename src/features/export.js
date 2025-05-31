@@ -293,3 +293,70 @@ export function exportAsPDF(svgElement) {
     img.src = "data:image/svg+xml;base64," + encodedSvgString;
 }
 
+/**
+ * Export the concept lattice as an SLF (Simple Lattice Format) file.
+ * SLF is a textual format commonly used in FCA tools like ConExp.
+ * This function extracts objects, attributes, and concepts (extent/intent pairs).
+ * 
+ * @param {Object} graphData - The lattice graph data (should include extent and intent for nodes).
+ */
+export function exportAsSLF(graphData) {
+    if (!graphData) {
+        console.error("❌ exportAsSLF: No graph data found!");
+        alert("Error: No lattice data to export.");
+        return;
+    }
+
+    disableExportDropdown(); // Prevent multiple export triggers
+
+    console.log("📌 Exporting lattice as SLF...");
+
+    // Header for the SLF file (starts with B section)
+    const header = `B\n`;
+
+    const objects = new Set();    // Collect all unique objects (extent elements)
+    const attributes = new Set(); // Collect all unique attributes (intent elements)
+
+    // Traverse all nodes to extract extents and intents
+    graphData.nodes.forEach(node => {
+        (node.extent || []).forEach(obj => objects.add(obj));
+        (node.intent || []).forEach(attr => attributes.add(attr));
+    });
+
+    // Convert sets to arrays
+    const objectList = Array.from(objects);
+    const attributeList = Array.from(attributes);
+
+    // Begin composing SLF content
+    let slf = header;
+
+    // Write object list
+    slf += `# Objects\n`;
+    slf += objectList.join("\n") + "\n\n";
+
+    // Write attribute list
+    slf += `# Attributes\n`;
+    slf += attributeList.join("\n") + "\n\n";
+
+    // Write L section: list of all concepts with extents and intents
+    slf += `L\n# Concepts: extent and intent\n`;
+    graphData.nodes.forEach((node, idx) => {
+        const extent = (node.extent || []).join(", ");
+        const intent = (node.intent || []).join(", ");
+        slf += `Concept ${idx + 1}:\nE: ${extent}\nI: ${intent}\n\n`;
+    });
+
+    // Convert to downloadable plain text file
+    const blob = new Blob([slf], { type: "text/plain" });
+    const downloadLink = document.createElement("a");
+    downloadLink.href = URL.createObjectURL(blob);
+    downloadLink.download = "concept_lattice.slf";
+
+    // Trigger download
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+
+    console.log("✅ SLF exported successfully!");
+    enableExportDropdown(); // Re-enable dropdown
+}
