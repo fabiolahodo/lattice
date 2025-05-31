@@ -1,1 +1,0 @@
-https://github.com/xflr6/concepts/blob/master/examples/bob-ross-serialized.py
