@@ -281,21 +281,21 @@
 
     <!-- File Upload Section -->
     <section>
-      <h3>Upload JSON File</h3>
+      <h3>Upload Concept Lattice (JSON)</h3>
       <div class="flex-column">
         <!-- Upload and Load Section -->
         <div class="flex-row">
-          <input type="file" id="file-upload" accept=".json">
+          Select your JSON file: <input type="file" id="file-upload" accept=".json">
           <button id="load-json-file"> Load JSON File </button>
         </div>
     
         <!-- Conversion Information -->
     <div class="button-container">
       <p class="description">
-        If your file is in 
+        If your file matches the
         <a href="https://concepts.readthedocs.io/en/stable/advanced.html#custom-serialization-format" style="color: #007bff; text-decoration: none;">
-          this format
-        </a>, you can convert it into a suitable format.
+          Concepts Python library format
+        </a>, you can convert it to the supported JSON format automatically.
       </p>
       <!-- Conversion button -->
       <button id="convert-and-download">Convert and Download</button>
@@ -303,22 +303,22 @@
     </section>
 
     <!-- Table Section -->
-    <section>
+    <section id="formal-context">
       <h3>Formal Context</h3>
-      <p>
-        This is a simple example of a concept lattice. Taken from <a href="https://upriss.github.io/fca/fcaintro.html">Ute Priss</a> website.
+      <p class="description">
+        Click the button below to display the formal context corresponding to the uploaded lattice.
       </p>
       <button id="show-formal-context" >Show Formal Context</button>
       <div class="table-container"></div>      
     </section>
-
+<!--
     <section>
       <h3>Create/Modify Formal Context</h3>
       <p>
         Create or modify your own Formal context by clicking here.
       </p>
       </section> 
-
+ -->
     <!-- Metrics Section -->
     <section id="metrics-container">
       <h2>Lattice Metrics</h2>
@@ -384,7 +384,7 @@
     </div>
     </section>
 
-   <!-- Compute Implications (Canonical Base) (Step 4) -->
+   <!-- Compute Implications (Canonical Base) (Step 4) 
    <section>
     <h3>Compute Canonical Base</h3>
     <div>
@@ -393,14 +393,14 @@
     <div id="results">
     </div>
   </section>
-
+  -->
     <!-- Tooltip -->
     <div id="tooltip"></div>
 
     <!-- Selected Node Details -->
     <section>
       <h3>Selected Node Details</h3>
-      <div id="selected-node-info">Click a node to see its details.</div>
+      <div id="selected-node-info">Click a concept in the lattice to view its extent, intent, and other details here.</div>
     </section>
 
     <!-- Shortest Path Section -->
