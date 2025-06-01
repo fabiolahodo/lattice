@@ -3,15 +3,14 @@
 // Import dependencies
 import * as d3 from 'd3';
 import { renderGraph, centerGraph  } from './rendering.js';
-//import { createSimulation } from './simulation.js';
 import { addInteractivity, addNodeInteractivity, computeSuperSubConcepts, updateLinks } from './interactivity.js';
 import { GRAPH_CONFIG } from './config.js'; 
 import { calculateMetrics } from './metrics.js';
 import { computeCanonicalBase } from './canonicalBase.js';
 import { setupFilterControls } from '../features/setupFilters.js'; 
 import { computeReducedLabels, formatLabel } from './reducedLabeling.js';
-import { assignLayers, orderVerticesWithinLayers, adjustNodePositions } from './layering.js';
-import { exportAsJSON, exportAsPNG, exportAsCSV, exportAsPDF } from '../features/export.js';
+import { assignLayers, orderVerticesWithinLayers, adjustNodePositions, adjustLayerSpacing } from './layering.js';
+import { exportAsJSON, exportAsPNG, exportAsCSV, exportAsPDF, exportAsSLF } from '../features/export.js';
 
 
 /**
@@ -74,8 +73,10 @@ function handleExportSelection(event, graphData) {
     }
 
     exportAsPDF(svgElement);
+}else if (selectedOption === "export-slf") {
+    console.log("✅ Exporting as SLF...");
+    exportAsSLF(graphData);
 }
-
     // ✅ Reset dropdown after an export is triggered (prevents double execution)
     event.target.value = ""; // Reset selection to prevent re-triggering
 
@@ -177,7 +178,6 @@ export async function testCanonicalBaseDynamic(filePath) {
  * @returns {Object} - The SVG and simulation instances for further use.
  */
 export function createLattice(graphData, options = {}) {
-  //const { container = 'body', width = 800, height = 600 } = options;
   console.log("🚀 Creating Lattice Visualization...");
 
   // Merge options with defaults from the config file
@@ -201,20 +201,34 @@ export function createLattice(graphData, options = {}) {
     }
 });
 
+  // Step 1: Enrich nodes with hierarchical relationships
+  computeSuperSubConcepts(graphData);
+
+   // Step 2: Layer assignment
   console.log("📌 Assigning Layers...");
   const layers = assignLayers(graphData);
   graphData.layers = layers;  // Store layers inside graphData
+ /* 
+  // Step 3: Vertical spacing between layers
+    console.log("📌 Adjusting Layer Spacing...");
+    adjustLayerSpacing(layers, { width, height, padding: GRAPH_CONFIG.dimensions.padding });
 
-
-console.log("📌 Ordering Nodes Within Layers...");
-orderVerticesWithinLayers(layers, graphData);  // Optimize horizontal positioning
-
+   // Step 4: Horizontal ordering using barycenter heuristics
+  console.log("📌 Ordering Nodes Within Layers...");
+  orderVerticesWithinLayers(layers, graphData);  // Optimize horizontal positioning
+*/
+  // Step 5: Horizontal positioning
+  console.log("📌 Assigning X Positions...");
+  adjustNodePositions(layers, width, GRAPH_CONFIG.dimensions.padding);
+  console.log("🔍 X positions after adjustNodePositions:", layers.flat().map(n => ({ id: n.id, x: n.x })));
+/*
+  // Step 6: Vertical positioning
   console.log("📌 Assigning X & Y positions...");
   // Set y-coordinates for nodes based on their assigned layers
   const layerSpacing = height / (layers.length + 1);
 
   layers.forEach((layer, layerIndex) => {
-    const xSpacing = (width - 2 * GRAPH_CONFIG.dimensions.padding) / (layer.length + 1);
+    //const xSpacing = (width - 2 * GRAPH_CONFIG.dimensions.padding) / (layer.length + 1);
       layer.forEach((node, nodeIndex) => {
           node.y = GRAPH_CONFIG.dimensions.padding + layerIndex * layerSpacing; // Assign vertical spacing based on layer index
           //node.x = GRAPH_CONFIG.dimensions.padding +(nodeIndex + 1) * xSpacing; // Horizontal spacing
@@ -222,15 +236,34 @@ orderVerticesWithinLayers(layers, graphData);  // Optimize horizontal positionin
       });
   });
 
-
+  // Step 7: Sync computed x/y positions back into graphData.nodes
+  const updatedNodes = layers.flat();
+   for (const updatedNode of updatedNodes) {
+        const originalNode = graphData.nodes.find(n => n.id === updatedNode.id);
+        if (originalNode) {
+            originalNode.x = updatedNode.x;
+            originalNode.y = updatedNode.y;
+        }
+    }
+/*
   console.log("📌 Computing Superconcepts and Subconcepts...");
   computeSuperSubConcepts(graphData);  // Ensure correct hierarchical relationships
 
   // ✅ Spread nodes horizontally based on parent alignment
 adjustNodePositions(layers, width, GRAPH_CONFIG.dimensions.padding);
+*/
 
   // ✅ Compute reduced labels before rendering
   computeReducedLabels(graphData.nodes, graphData.links);
+
+   // ✅ Sync final layout to graphData.nodes
+    layers.flat().forEach(updated => {
+        const original = graphData.nodes.find(n => n.id === updated.id);
+        if (original) {
+            original.x = updated.x;
+            original.y = updated.y;
+        }
+    });
 
   // Calculate metrics and log them
   const metrics = calculateMetrics(graphData);
@@ -254,8 +287,6 @@ adjustNodePositions(layers, width, GRAPH_CONFIG.dimensions.padding);
     console.error("❌ SVG or nodeGroup is undefined! Cannot add interactivity.");
     return;
   }
-  // Add interactivity after creating the simulation
-  //addInteractivity(svg, simulation);
 
   // ✅ Pass correct arguments to `addInteractivity` and `addNodeInteractivity`
   addInteractivity(svg, graphData);
@@ -264,11 +295,12 @@ adjustNodePositions(layers, width, GRAPH_CONFIG.dimensions.padding);
   addNodeInteractivity(nodeGroup, linkGroup, graphData, updateLinks);
 
  // Dynamically center the graph
- //const graphGroup = svg.select('.graph-transform');
  setTimeout(() => {
   const bbox = svg.select('.graph-transform').node().getBBox();
-  centerGraph(svg, { width, height, padding: GRAPH_CONFIG.dimensions.padding, bbox });
- }, 100);
+  if (bbox) {
+    centerGraph(svg, { width, height, padding: GRAPH_CONFIG.dimensions.padding, bbox });
+     }
+  }, 100);
 
   // Add export options after rendering
   addExportOptions(graphData);
@@ -387,10 +419,6 @@ export function filterLattice(graphData, filterCriteria) {
     const intentMatch = attributeFilter
       ? attributeFilter.every(attr => node.label.includes(attr)) // Ensure every attribute in the filter is present in the node's label
       : true; // If no filter is provided, allow all nodes
-    
-    /* Include the node only if it matches both the extent and intent filters
-    return extentMatch && intentMatch;
-    */
    
    // Keep all nodes and links
   return { nodes: graphData.nodes, links: graphData.links };

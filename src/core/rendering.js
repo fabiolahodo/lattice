@@ -37,7 +37,7 @@ export function renderGraph(container, graphData, options) {
     console.log("📌 Computing reduced labels...");
     computeReducedLabels(graphData.nodes, graphData.links);
 
-    // Assign layers and positions
+    // Assign layers and node positions
     console.log("📌 Assigning hierarchical layers...");
     const layers = assignLayers(graphData);
     if (!layers || layers.length === 0) {
@@ -50,7 +50,7 @@ export function renderGraph(container, graphData, options) {
     adjustLayerSpacing(layers, { width, height, padding });
     console.log("✅ Layer spacing adjusted.");
 
-    // 🔹 Order vertices within layers to minimize edge crossings
+    // Order vertices within layers to minimize edge crossings
     console.log("📌 Ordering vertices within layers...");
     orderVerticesWithinLayers(layers, graphData);
 
@@ -73,8 +73,8 @@ export function renderGraph(container, graphData, options) {
             node.y = padding + layerIndex * (height / layers.length);
         });
     });
-
-       //Ensure Links Reference Nodes Correctly
+    
+    //Ensure Links Reference Nodes Correctly
        graphData.links.forEach(link => {
         if (typeof link.source === "string" || typeof link.source === "number") {
             link.source = graphData.nodes.find(n => n.id == link.source);
@@ -115,14 +115,9 @@ export function renderGraph(container, graphData, options) {
     const linkContainer = g.append("g").attr("class", "link-group");
     //linkGroup = g.append("g")
     linkGroup = linkContainer
-        //.attr("class", "link-group")
-        //.selectAll('.link')
         .selectAll('line')
         .data(graphData.links)
-        //.data(graphData.links, d => d.source.id + '-' + d.target.id) // Ensure links are correctly bound
-        //.enter()
         .join("line")
-        //.append('line')
         .attr('class', 'link')
         .attr('stroke', GRAPH_CONFIG.link.color)
         .attr('stroke-width', d => d.weight)
@@ -130,92 +125,6 @@ export function renderGraph(container, graphData, options) {
         .attr('y1', d => d.source.y)
         .attr('x2', d => d.target.x)
         .attr('y2', d => d.target.y);
-/*
-        console.log("📌 Drawing Nodes...");
-        graphData.nodes.forEach(node => {
-            const nodeGroup = g.append("g")
-                .attr("class", "node-label-group")
-                .attr("transform", `translate(${node.x}, ${node.y})`);
-        
-        // Extent Label (Above Node)
-        nodeGroup.append("foreignObject")
-            .attr("width", 100)
-            .attr("height", 30)
-            .attr("x", -50)
-            .attr("y", -40) // Position above node
-            .html(() => node.reducedExtent.length > 0 ? `<div style="text-align:center; font-weight:bold;">${node.reducedExtent.join(", ")}</div>` : "");
-
-        // Node Circle
-        nodeGroup.append("circle")
-            .attr("r", GRAPH_CONFIG.node.maxRadius)
-            .attr("fill", node.color || GRAPH_CONFIG.node.color);
-
-        // Intent Label (Below Node)
-        nodeGroup.append("foreignObject")
-            .attr("width", 100)
-            .attr("height", 30)
-            .attr("x", -50)
-            .attr("y", 10) // Position below node
-            .html(() => node.reducedIntent.length > 0 ? `<div style="text-align:center; font-style:italic;">${node.reducedIntent.join(", ")}</div>` : "");
-    });
-
-    console.log("📌 Ensuring labelGroup is set...");
-    labelGroup = d3.selectAll(".node-label-group");
-
-*/
-    /*            
-    console.log("📌 Drawing Nodes...");
-    nodeGroup = g.selectAll('.node')
-        .data(graphData.nodes)
-        .enter()
-        .append('circle')
-        .attr('class', 'node')
-        .attr('cx', d => d.x)
-        .attr('cy', d => d.y)
-        .attr('r', GRAPH_CONFIG.node.maxRadius)
-        .attr('fill', d => d.color || GRAPH_CONFIG.node.color);
-
-    console.log("📌 Adding Node Labels...");
-    labelGroup = g.selectAll('.node-label')
-        .data(graphData.nodes)
-        .enter()
-        .append('text')
-        .attr('class', 'node-label')
-        .attr('text-anchor', 'middle')
-        //.attr('dy', d => (d.y < height / 2 ? -GRAPH_CONFIG.node.labelOffset : GRAPH_CONFIG.node.labelOffset))
-        .attr('dx', d => d.x) // Position labels correctly
-        .attr('dy', d => d.y - GRAPH_CONFIG.node.labelOffset) // Adjust label above the node
-        .text(d => d.id);
-
-    // ✅ Ensure edges follow nodes when moved
-    function updateLinks() {
-        linkGroup
-            .attr('x1', d => d.source.x)
-            .attr('y1', d => d.source.y)
-            .attr('x2', d => d.target.x)
-            .attr('y2', d => d.target.y);
-    }
-*/
-    
-   /* // ✅ Update node and label positions
-   function updateNodes(){
-        nodeGroup
-            .attr('cx', d => d.x)
-            .attr('cy', d => d.y);
-
-        labelGroup
-            .attr('x', d => d.x)
-            .attr('y', d => d.y - GRAPH_CONFIG.node.labelOffset);
-    }
-    */
-   /*
-    //Ensure that labelGroup is correctly created
-    if (!labelGroup.empty()) {
-        updateLabels("default", labelGroup);
-    } else {
-        console.error("❌ Label group is empty, skipping label update.");
-    }
-    */
 
     console.log("📌 Drawing Nodes...");
     nodeGroup = g.selectAll('.node-group')
@@ -249,7 +158,6 @@ export function renderGraph(container, graphData, options) {
     }, 100);
 
     // ✅ Pass updateLinks to ensure edges move with nodes
-    //addNodeInteractivity(nodeGroup, linkGroup, graphData, nodeGroup, updateLinks);
 
     if (graphData && graphData.nodes && graphData.links) {
         addNodeInteractivity(nodeGroup, linkGroup, graphData, nodeGroup, updateLinks);
@@ -270,21 +178,9 @@ export function updateNodes(graphData) {
         console.error("❌ updateNodes() called before nodeGroup or labelGroup was initialized!");
         return;
     }
-    /*
-    nodeGroup
-        .attr('cx', d => d.x)
-        .attr('cy', d => d.y);
-
-    labelGroup
-        .attr('dx', d => d.x)
-        .attr('dy', d => d.y - GRAPH_CONFIG.node.labelOffset);
-    */
        
      // ✅ Ensure nodes visually move
      nodeGroup.attr("transform", d => `translate(${d.x}, ${d.y})`);
-
-     // ✅ Ensure labels move with nodes
-     //labelGroup.attr("transform", d => `translate(${d.x}, ${d.y - GRAPH_CONFIG.node.labelOffset})`);
     
     // ✅ Also update links to match new node positions
     updateLinks(graphData);
@@ -325,22 +221,6 @@ function wrapText(text, maxCharsPerLine) {
  */
 export function updateLabels(mode, labelGroup) {
     console.log(`🔄 Updating Labels: Mode = ${mode}`);
-  /*
-   // Select node groups
-    const nodeGroups = d3.selectAll(".node-label-group");
-
-     // Ensure nodes exist
-    if (nodeGroups.empty()) {
-        console.error("❌ No nodes found. Ensure rendering runs before label updates.");
-        return;
-    }
-
-    nodeGroups.each(function (d) {
-        if (!d || !d.id) {
-            console.warn("⚠️ Skipping undefined node.");
-            return;
-        }
-    */
 
     // Select all nodes with labels
     d3.selectAll(".node-label-group").each(function (d, i) {
@@ -354,24 +234,6 @@ export function updateLabels(mode, labelGroup) {
 
     // Clear existing labels
     nodeGroup.selectAll("foreignObject").remove();
-   
-    /*
-    labelGroup.text(d => {
-        if (!d) return ""; // Handle undefined nodes
-
-        if (mode === "full") {
-            return d.label || d.id; // Full mode: Use `label` from JSON, fallback to `id`
-        } else if (mode === "reduced") {
-            if (!Array.isArray(d.reducedExtent) || !Array.isArray(d.reducedIntent)) {
-                console.warn(`⚠️ Reduced labels missing for node ${d.id}.`);
-                return "";
-            }
-            return formatLabel(d.reducedExtent, d.reducedIntent);
-        } else {
-            return d.id; // Default mode: Show node ID
-        }
-    });
-    */
 
     // Extract the extent and intent text based on the mode
     const extentText = (mode === "full" ? d.fullExtent : d.reducedExtent).join(", ");

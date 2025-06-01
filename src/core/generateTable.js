@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", function () {
  * Generates a Formal Context table dynamically and inserts it into the document.
  *
  * The function extracts unique objects (Extent) as table rows and unique properties (Intent) as columns.
- * If an object has a property, the corresponding table cell is filled with "1"; otherwise, it remains empty.
+ * If an object has a property, the corresponding table cell is filled with "x"; otherwise, it remains empty.
  *
  * @param {Array} nodes - The array of nodes containing Extent and Intent labels.
  */
@@ -116,7 +116,7 @@ function generateFormalContextTable(nodes) {
         objectCell.textContent = obj;
         row.appendChild(objectCell);
 
-        // Fill the row with "1" where an object has the corresponding property
+        // Fill the row with "x" where an object has the corresponding property
         propertyList.forEach(prop => {
             const cell = document.createElement("td");
             /*
@@ -131,7 +131,7 @@ function generateFormalContextTable(nodes) {
                 return nodeExtent.has(obj) && nodeIntent.has(prop);
             });
 
-            cell.textContent = hasProperty ? "1" : "";
+            cell.textContent = hasProperty ? "x" : "";
             row.appendChild(cell);
         });
 
