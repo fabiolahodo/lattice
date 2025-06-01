@@ -3,13 +3,13 @@
 
 export const GRAPH_CONFIG = {
     dimensions: {
-      width: 1600, // Default width of the graph
-      height: 800, // Default height of the graph
+      width: 1200, // Default width of the graph (change later to 1600)
+      height: 600, // Default height of the graph (change later to 800)
       padding: 50, // Padding around the graph
     },
     node: {
-      maxRadius: 10, // Max radius for small graphs
-      minRadius: 5, // Smaller minimum radius for very large graphs
+      maxRadius: 10, // Max radius for small graphs (change later to 15)
+      minRadius: 5, // Smaller minimum radius for very large graphs (change later to 10)
       color: 'blue', // Default node color
       selectedColor: 'red', // Color for selected nodes
       labelOffset: 15, // Distance of labels from nodes
