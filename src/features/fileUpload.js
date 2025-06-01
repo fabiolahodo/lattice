@@ -18,8 +18,8 @@ export function setupFileUpload() {
     // Get references to the file input, compute button, and results container from the DOM
     const fileInput = document.getElementById('file-upload');
     const loadButton = document.getElementById('load-json-file');
-    const computeButton = document.getElementById('compute-canonical-base');
-    const resultsContainer = document.getElementById('results');
+    //const computeButton = document.getElementById('compute-canonical-base');
+    //const resultsContainer = document.getElementById('results');
     const convertButton = document.getElementById("convert-and-download");
 
 
@@ -27,17 +27,19 @@ export function setupFileUpload() {
      console.log("🔍 Checking DOM elements...");
      console.log("📂 fileInput:", fileInput);
      console.log("📂 loadButton:", loadButton);
-     console.log("📂 computeButton:", computeButton);
-     console.log("📂 resultsContainer:", resultsContainer);
+     //console.log("📂 computeButton:", computeButton);
+     //console.log("📂 resultsContainer:", resultsContainer);
      console.log("📂 convertButton:", convertButton);
 
      // Debug: Log elements
     console.log("🔍 Checking DOM elements before setup...", {
-        fileInput, loadButton, computeButton, resultsContainer
+        //fileInput, loadButton, computeButton, resultsContainer
+        fileInput, loadButton
     });
 
     // Validate elements
-    if (!fileInput || !loadButton || !computeButton || !resultsContainer || !convertButton) {
+    // if (!fileInput || !loadButton || !computeButton || !resultsContainer || !convertButton) {
+    if (!fileInput || !loadButton || !convertButton) {
         console.error('File upload elements are missing in the DOM.');
         return;
     }
@@ -109,6 +111,7 @@ export function setupFileUpload() {
     /**
      * Compute Canonical Base. Handles the Compute button click event to process the uploaded data.
      */
+    /*
     computeButton.addEventListener('click', () => {
         
        // const file = fileInput.files[0];
@@ -125,6 +128,7 @@ export function setupFileUpload() {
          * Extracts concepts from the uploaded JSON data.
          * @returns {Array} List of extracted concepts (each with extent and intent).
          */
+        /*
         const concepts = extractConceptsFromGraph(uploadedData);
         console.log('Extracted Concepts:', concepts);
 
@@ -132,6 +136,7 @@ export function setupFileUpload() {
          * Computes the canonical base (implication rules) for the extracted concepts.
          * @returns {Array} List of implications, each with a premise and conclusion.
          */
+        /*
         const canonicalBase = computeCanonicalBase(concepts);
         console.log('Computed Canonical Base:', canonicalBase);
         
@@ -140,6 +145,7 @@ export function setupFileUpload() {
          * Displays the computed canonical base in the results section.
          * @param {Array} canonicalBase - The computed implications to display.
          */
+        /*
         resultsContainer.textContent = JSON.stringify(canonicalBase, null, 2);
 
     } catch (error) {
@@ -147,10 +153,7 @@ export function setupFileUpload() {
         alert('❌Error in computation. Please check your file format.');
     }
 });
-
-// Convert and Download button click event
-//convertButton.replaceWith(convertButton.cloneNode(true)); // Remove old listeners
-//convertButton = document.getElementById("convert-and-download");
+*/
 
 convertButton.addEventListener("click", () => {
     console.log("🟢 Convert button clicked!");
@@ -187,21 +190,4 @@ convertButton.addEventListener("click", () => {
       alert('❌ Conversion failed. Please ensure the file format is correct.');
     }
   });
-        /*const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const graphData = JSON.parse(event.target.result);
-                console.log('Graph Data:', graphData);
-
-                // Additional logic for processing the uploaded file
-            } catch (error) {
-                console.error('Error reading or processing file:', error);
-                alert('Invalid JSON file.');
-            }
-        };
-
-        reader.readAsText(file);
-    });*/
-
-
 }
