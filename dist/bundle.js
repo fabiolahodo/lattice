@@ -3498,13 +3498,13 @@ function zoom() {
 
 const GRAPH_CONFIG = {
     dimensions: {
-      width: 1600, // Default width of the graph
-      height: 800, // Default height of the graph
+      width: 1200, // Default width of the graph (change later to 1600)
+      height: 600, // Default height of the graph (change later to 800)
       padding: 50, // Padding around the graph
     },
     node: {
-      maxRadius: 10, // Max radius for small graphs
-      minRadius: 5, // Smaller minimum radius for very large graphs
+      maxRadius: 10, // Max radius for small graphs (change later to 15)
+      minRadius: 5, // Smaller minimum radius for very large graphs (change later to 10)
       color: 'blue', // Default node color
       selectedColor: 'red', // Color for selected nodes
       labelOffset: 15, // Distance of labels from nodes
@@ -4211,37 +4211,66 @@ function assignLayers$1(graphData) {
 
 /**
  * Computes layers using the Coffman-Graham algorithm for topological sorting.
+ * Each node is placed in the lowest possible layer where all parents are already assigned.
  * @param {Object} graphData - Input graph with node hierarchy
  * @returns {Array} layers - Computed layering
  */
 function computeCoffmanGrahamLayers(graphData) {
     const layers = [];
-    const height = GRAPH_CONFIG.dimensions.height; // Canvas height
+    const placedNodes = new Set();
     
-    // Sort nodes by number of parents in descending order
-    const nodeQueue = [...graphData.nodes].sort((a, b) => b.superconcepts.length - a.superconcepts.length);
+     // Step 1: Topological sort of the graph
+    const sortedNodes = topologicalSort(graphData);
 
-    nodeQueue.forEach((node) => {
+    // Step 2: Place each node in the first valid layer
+    sortedNodes.forEach((node) => {
         let layer = 0;
 
         // Find the lowest layer where all parent nodes have already been placed
-        while (layer < layers.length) {
-            const dependenciesMet = node.superconcepts.every((parent) =>
-                layers[layer].some((layerNode) => layerNode.id === parent.id)
+        while (true) {
+            const parents = node.superconcepts || [];
+
+            const allParentsPlaced = parents.every(parent =>
+                layers.slice(0, layer).some(l => l.some(n => n.id === parent.id))
             );
-            if (dependenciesMet) break;
+
+            if (allParentsPlaced) break;
             layer++;
         }
 
         // Initialize new layer if needed and assign the node
         if (!layers[layer]) layers[layer] = [];
+        
+        // Place node and mark it as placed
         layers[layer].push(node);
+        placedNodes.add(node.id);
 
         // Estimate Y-position of the node within the layout
-        node.y = (layer + 1) * (height / (layers.length + 1));
+        //node.y = (layer + 1) * (height / (layers.length + 1));
     });
 
     return layers;
+}
+
+/**
+ * Performs a topological sort on the graph using DFS.
+ * Ensures parents are visited before children.
+ * @param {Object} graphData - The graph containing nodes with superconcepts
+ * @returns {Array} - Topologically sorted nodes
+ */
+function topologicalSort(graphData) {
+    const visited = new Set();
+    const result = [];
+
+    function dfs(node) {
+        if (visited.has(node.id)) return;
+        visited.add(node.id);
+        (node.superconcepts || []).forEach(dfs);
+        result.push(node);
+    }
+
+    graphData.nodes.forEach(dfs);
+    return result.reverse(); // Post-order reversed gives topological sort
 }
 
 /**
@@ -4311,74 +4340,279 @@ function computeBarycenterFromNeighbors(node, graphData, downward) {
  * @param {Array} layers - Array of layer groups
  * @param {Object} dimensions - Graph height and padding
  */
+
 function adjustLayerSpacing(layers, { height, padding }) {
     const numLayers = layers.length;
     if (numLayers === 0) return;
-
-    // Set a reasonable vertical gap based on label height
-    const maxLabelHeight = 30;
     const minSpacing = 80;
-    const dynamicSpacing = Math.max(minSpacing, maxLabelHeight * 2);
+    const maxSpacing = 300;
 
-    // Apply vertical position to each node in each layer
-    layers.forEach((layer, layerIndex) => {
+    const pressures = layers.map((layer, i) => {
+        let fanIn = 0;
+        let fanOut = 0;
+
         layer.forEach(node => {
-            node.y = padding + layerIndex * dynamicSpacing;
+            fanIn += (node.superconcepts || []).length;
+            fanOut += (node.subconcepts || []).length;
         });
+
+        return fanIn + fanOut; // total connections
     });
 
-    console.log(`✅ Adjusted layer spacing dynamically: ${dynamicSpacing}px`);
+    // Normalize pressures
+    const maxPressure = Math.max(...pressures);
+    const minPressure = Math.min(...pressures);
+    const pressureRange = maxPressure - minPressure || 1;
+
+    const layerSpacings = pressures.map(p => {
+        const normalized = (p - minPressure) / pressureRange; // 0..1
+        return minSpacing + normalized * (maxSpacing - minSpacing);
+    });
+
+    // Compute cumulative y position
+    let currentY = padding;
+    for (let i = 0; i < layers.length; i++) {
+        const layer = layers[i];
+        layer.forEach(node => {
+            node.y = currentY;
+        });
+        currentY += layerSpacings[i];
+    }
+
+    console.log("✅ Adaptive vertical layer spacing based on structural pressure.");
 }
 
 /**
  * Distributes X positions of nodes within each layer.
  * Anchors positions based on average parent x-coordinates.
- * Prevents horizontal overlap.
+ * Prevents horizontal overlap and false alignment with unrelated edges.
+ * Special care is taken for layers with only one node to avoid misleading vertical stacking.
  * @param {Array} layers - Grouped layer nodes
  * @param {number} width - Canvas width
  * @param {number} padding - Padding to preserve margins
  */
-function adjustNodePositions(layers, width, padding) {
-    const maxShiftRatio = 0.3; // Limit how far nodes can shift from parent anchor
-    const minSpacing = 40; // Minimum spacing between sibling nodes
+/*
+export function adjustNodePositions(layers, width, padding) {
+    const maxShiftRatio = 0.4;
+    const minSpacing = 150;
+    const minGap = 50; // Min space between nodes
+    const collisionThreshold = 25;
 
-    layers.forEach(layer => {
-        //const xSpacing = (width - 2 * padding) / (layer.length + 1);
-
+    layers.forEach((layer, layerIndex) => {
         const layerSize = layer.length;
         if (layerSize === 0) return;
 
-        // Compute the average x position of all parents in this layer
-        const allParents = layer.flatMap(node => node.superconcepts || []);
-        const parentAnchorX = allParents.length > 0
-            ? allParents.reduce((sum, p) => sum + p.x, 0) / allParents.length
-            : width / 2;
+        // 🔹 Handle single-node layer (top node)
+        if (layerSize === 1) {
+            const node = layer[0];
+            const parents = node.superconcepts || [];
+            const children = node.subconcepts || [];
 
-        // Determine spacing and available width centered around parent cluster
-        const layerWidth = Math.max(minSpacing * (layerSize + 1), 150);
-        const xSpacing = layerWidth / (layerSize + 1);
-        const startX = parentAnchorX - layerWidth / 2;
-
-        // Assign x-position to each node based on soft alignment
-        layer.forEach((node, index) => {
-            const defaultX = startX + (index + 1) * xSpacing;
-
-            if (!node.superconcepts || node.superconcepts.length === 0) {
-                node.x = defaultX;
-                return;
+            let baseX = width / 2;
+            if (parents.length > 0) {
+                baseX = parents.reduce((sum, p) => sum + p.x, 0) / parents.length;
             }
 
-            // Compute average x of parents
-            const avgParentX = node.superconcepts.reduce((sum, parent) => sum + parent.x, 0) / node.superconcepts.length;
-            const shift = defaultX - avgParentX;
-            const maxShift = xSpacing * maxShiftRatio;
-            const clampedShift = Math.max(-maxShift, Math.min(shift, maxShift));
+            const parentSpread = Math.max(...parents.map(p => p.x), 0) - Math.min(...parents.map(p => p.x), 0);
+            const childSpread = Math.max(...children.map(c => c.x), 0) - Math.min(...children.map(c => c.x), 0);
 
-            node.x = avgParentX + clampedShift;
+            const needsNudge = (parents.length && children.length && parentSpread < 10 && childSpread < 10);
+            node.x = needsNudge ? baseX + (layerIndex % 2 === 0 ? -50 : 50) : baseX;
+            return;
+        }
+
+        // Check for shared parents
+        const allParents = layer.map(n => n.superconcepts?.[0]?.id).filter(Boolean);
+        const sharedParentId = allParents.every(id => id === allParents[0]) ? allParents[0] : null;
+
+        // More spacing for upper layers
+        const baseFactor = 1.2 + (1 - layerIndex / layers.length) * 1.2;
+        const nodeFactor = Math.min(1.0 + (layerSize / 10), 3.0);
+        
+        // Enforce minimum spacing between nodes
+        const xSpacing = minSpacing * baseFactor * nodeFactor;
+
+        // Compute total width of the layer based on that spacing
+        const layerWidth = (layerSize - 1) * xSpacing;
+        const startX = (width - layerWidth) / 2;
+
+
+        // 🎯 Step 1: Default spacing
+        layer.forEach((node, i) => {
+            node.x = startX + (i + 1) * xSpacing;
+        });
+
+        // 🧭 Step 2:Refine based on parents (barycenter shift)
+        if (sharedParentId) {
+            // All nodes share one parent → spread evenly around that parent
+            const sharedParent = layer[0].superconcepts.find(p => p.id === sharedParentId);
+            const centerX = sharedParent?.x ?? (width / 2);
+            const spreadWidth = Math.max(minSpacing * (layerSize - 1), 200);
+            const newSpacing = spreadWidth / (layerSize - 1);
+            const spreadStartX = centerX - spreadWidth / 2;
+
+            layer.forEach((node, i) => {
+                node.x = spreadStartX + i * newSpacing;
+            });
+
+            console.log(`📐 Layer ${layerIndex}: Spread evenly (1 common parent: ${sharedParentId})`);
+        } else {
+            // Standard barycenter shift
+            layer.forEach((node) => {
+                const parents = node.superconcepts || [];
+                if (!parents.length) return;
+
+                const avgParentX = parents.reduce((sum, p) => sum + p.x, 0) / parents.length;
+                const shift = node.x - avgParentX;
+                const maxShift = xSpacing * maxShiftRatio;
+                const clamped = Math.max(-maxShift, Math.min(shift, maxShift));
+                node.x = avgParentX + clamped;
+            });
+        }
+
+        // 🚫 Step 3: Collision resolution
+        let hasOverlap = true;
+        let iteration = 0;
+        const maxIterations = 10;
+
+        while (hasOverlap && iteration < maxIterations) {
+            hasOverlap = false;
+            for (let i = 1; i < layer.length; i++) {
+                const left = layer[i - 1];
+                const right = layer[i];
+                const dx = right.x - left.x;
+
+                if (dx < minGap) {
+                    const shift = (minGap - dx) / 2;
+                    left.x -= shift;
+                    right.x += shift;
+                    hasOverlap = true;
+                }
+            }
+            iteration++;
+        }
+
+        // 🎯 Step 4: Recentering the entire layer
+        const minX = Math.min(...layer.map(n => n.x));
+        const maxX = Math.max(...layer.map(n => n.x));
+        const layerMid = (minX + maxX) / 2;
+        const viewMid = width / 2;
+        const offset = viewMid - layerMid;
+
+        layer.forEach(n => {
+            n.x += offset;
         });
     });
 
-    console.log("✅ Node positions adjusted with soft vertical alignment constraint.");
+    console.log("✅ Final node positions assigned with alignment, spacing, and centering.");
+}
+*/
+
+function adjustNodePositions(layers, width, padding) {
+    const maxShiftRatio = 0.4;
+    const minSpacing = 100;
+    const minGap = 50;
+
+    layers.forEach((layer, layerIndex) => {
+        const layerSize = layer.length;
+        if (layerSize === 0) return;
+
+        // 🔹 Special case: Top or Bottom node alone
+        if (layerSize === 1) {
+            const node = layer[0];
+            const parents = node.superconcepts || [];
+            const children = node.subconcepts || [];
+
+            let baseX = width / 2;
+
+            if (parents.length > 0) {
+                baseX = parents.reduce((sum, p) => sum + p.x, 0) / parents.length;
+            }
+
+            const parentSpread = Math.max(...parents.map(p => p.x), 0) - Math.min(...parents.map(p => p.x), 0);
+            const childSpread = Math.max(...children.map(c => c.x), 0) - Math.min(...children.map(c => c.x), 0);
+
+            const needsNudge = (parents.length && children.length && parentSpread < 10 && childSpread < 10);
+            node.x = needsNudge ? baseX + (layerIndex % 2 === 0 ? -50 : 50) : baseX;
+            return;
+        }
+
+        // 🔄 Step 1: Default x-spacing based on layer width
+        const nodeFactor = Math.min(1.0 + (layerSize / 12), 3.5);
+        const baseFactor = 1.3 + (1 - layerIndex / layers.length) * 1.2;
+        const xSpacing = minSpacing * nodeFactor * baseFactor;
+
+        const layerWidth = (layerSize - 1) * xSpacing;
+        const startX = (width - layerWidth) / 2;
+
+        layer.forEach((node, i) => {
+            node.x = startX + i * xSpacing;
+        });
+
+        // 🧠 Step 2: Parent-based barycenter adjustment
+        const allParents = layer.map(n => n.superconcepts?.[0]?.id).filter(Boolean);
+        const sharedParentId = allParents.every(id => id === allParents[0]) ? allParents[0] : null;
+
+        if (sharedParentId) {
+            const sharedParent = layer[0].superconcepts.find(p => p.id === sharedParentId);
+            const centerX = sharedParent?.x ?? (width / 2);
+            const spreadWidth = Math.max(minSpacing * (layerSize - 1), 200);
+            const newSpacing = spreadWidth / (layerSize - 1);
+            const spreadStartX = centerX - spreadWidth / 2;
+
+            layer.forEach((node, i) => {
+                node.x = spreadStartX + i * newSpacing;
+            });
+
+            console.log(`📐 Layer ${layerIndex}: Centered under shared parent ${sharedParentId}`);
+        } else {
+            layer.forEach(node => {
+                const parents = node.superconcepts || [];
+                if (!parents.length) return;
+
+                const avgParentX = parents.reduce((sum, p) => sum + p.x, 0) / parents.length;
+                const shift = node.x - avgParentX;
+                const maxShift = xSpacing * maxShiftRatio;
+                const clamped = Math.max(-maxShift, Math.min(shift, maxShift));
+                node.x = avgParentX + clamped;
+            });
+        }
+
+        // 🚫 Step 3: Resolve overlaps
+        let hasOverlap = true;
+        let iteration = 0;
+        const maxIterations = 10;
+
+        while (hasOverlap && iteration < maxIterations) {
+            hasOverlap = false;
+            for (let i = 1; i < layer.length; i++) {
+                const left = layer[i - 1];
+                const right = layer[i];
+                const dx = right.x - left.x;
+
+                if (dx < minGap) {
+                    const shift = (minGap - dx) / 2;
+                    left.x -= shift;
+                    right.x += shift;
+                    hasOverlap = true;
+                }
+            }
+            iteration++;
+        }
+
+        // 🎯 Step 4: Recenter layer
+        const minX = Math.min(...layer.map(n => n.x));
+        const maxX = Math.max(...layer.map(n => n.x));
+        const layerMid = (minX + maxX) / 2;
+        const viewMid = width / 2;
+        const offset = viewMid - layerMid;
+
+        layer.forEach(n => {
+            n.x += offset;
+        });
+    });
+
+    console.log("✅ Final node positions adjusted for alignment and symmetry.");
 }
 
 /**
@@ -4386,9 +4620,10 @@ function adjustNodePositions(layers, width, padding) {
  * Only adjusts if deviation is small to preserve layout stability.
  * @param {Array} layers - All layered nodes
  */
-function straightenMidpoints(layers) {
-    const alignmentThreshold = 15; // Max horizontal spread allowed among parents/children to be considered aligned
-    const correctionThreshold = 60; // Max distance a node can deviate from the average before adjustment is skipped
+/*
+export function straightenMidpoints(layers) {
+    const alignmentThreshold = 30; // Max horizontal spread allowed among parents/children to be considered aligned
+    const correctionThreshold = 100; // Max distance a node can deviate from the average before adjustment is skipped
 
     for (let i = 1; i < layers.length - 1; i++) {
         const layer = layers[i];
@@ -4425,6 +4660,47 @@ function straightenMidpoints(layers) {
 
     console.log("✅ Applied refined midpoint straightening for nearly aligned chains.");
 }
+*/
+function straightenMidpoints(layers) {
+    const alignmentSpreadThreshold = 40;     // Allow some horizontal deviation
+    const correctionThreshold = 120;         // Only adjust if node isn't too far off
+    const minConnected = 2;                  // Minimum parents/children to consider
+
+    for (let i = 1; i < layers.length - 1; i++) {
+        const layer = layers[i];
+
+        layer.forEach(node => {
+            const parents = node.superconcepts || [];
+            const children = node.subconcepts || [];
+
+            if (parents.length < minConnected || children.length < minConnected) return;
+
+            const parentXs = parents.map(p => p.x);
+            const childXs = children.map(c => c.x);
+
+            const parentSpread = Math.max(...parentXs) - Math.min(...parentXs);
+            const childSpread = Math.max(...childXs) - Math.min(...childXs);
+
+            // Check if this node is structurally centered
+            const alignedParents = parentSpread < alignmentSpreadThreshold;
+            const alignedChildren = childSpread < alignmentSpreadThreshold;
+
+            if (alignedParents && alignedChildren) {
+                const avgParentX = parentXs.reduce((a, b) => a + b, 0) / parentXs.length;
+                const avgChildX = childXs.reduce((a, b) => a + b, 0) / childXs.length;
+                const avgX = (avgParentX + avgChildX) / 2;
+
+                const deviation = Math.abs(node.x - avgX);
+
+                if (deviation < correctionThreshold) {
+                    node.x = avgX;
+                }
+            }
+        });
+    }
+
+    console.log("✅ Improved midpoint straightening for aligned concept chains.");
+}
 
 /**
  * Detects and resolves visual conflicts between unrelated links and nearby nodes.
@@ -4432,13 +4708,16 @@ function straightenMidpoints(layers) {
  * @param {Array} layers - All node layers
  * @param {Object} graphData - Graph structure including links
  */
+
 function disambiguateEdgeProximity(layers, graphData) {
-    const disambiguationThreshold = 15; // Distance at which overlap is considered problematic
-    const nudgeAmount = 20;  // Horizontal offset applied to separate conflicting node
+    const disambiguationThreshold = 20; // Distance at which overlap is considered problematic
+    const nudgeAmount = 25;  // Horizontal offset applied to separate conflicting node
 
     const links = graphData.links;
     const allNodes = layers.flat(); // Flatten layers into a single array of nodes
 
+    // Perform two passes for better spacing correction
+    for (let pass = 0; pass < 2; pass++) {
     allNodes.forEach(node => {
         // Build a set of node IDs that are connected (directly related)
         const connectedIds = new Set([
@@ -4459,7 +4738,7 @@ function disambiguateEdgeProximity(layers, graphData) {
             const x0 = node.x;
             const y0 = node.y;
 
-            // Compute projection of node onto the line segment (edge)
+            // Compute projection of node onto the edge
             const dx = x2 - x1;
             const dy = y2 - y1;
             const lenSq = dx * dx + dy * dy;
@@ -4470,17 +4749,23 @@ function disambiguateEdgeProximity(layers, graphData) {
             const projX = x1 + tClamped * dx;
             const projY = y1 + tClamped * dy;
 
+            const dxProj = projX - x0;
+            const dyProj = projY - y0;
             // Compute distance between node and projected point
-            const dist = Math.sqrt((projX - x0) ** 2 + (projY - y0) ** 2);
+            const dist = Math.sqrt(dxProj ** 2 + dyProj ** 2);
+
+            // Additional criteria: if vertical distance is small, increase repulsion
+            const verticalBias = Math.abs(dyProj) < 40 ? 1.5 : 1.0;
 
             // Push node horizontally if too close to unrelated edge
-            if (dist < disambiguationThreshold) {
-                const offset = (x0 < projX ? -nudgeAmount : nudgeAmount);
-                node.x += offset;
+            if (dist < disambiguationThreshold * verticalBias) {
+                const offset = (x0 < projX ? -1 : 1);
+                node.x += offset * nudgeAmount ;
             }
         });
     });
-
+   
+    }
     console.log("✅ Disambiguated visual overlap between nodes and unrelated edges.");
 }
 
@@ -4516,7 +4801,7 @@ function renderGraph(container, graphData, options) {
     console.log("📌 Computing reduced labels...");
     computeReducedLabels$1(graphData.nodes, graphData.links);
 
-    // Assign layers and positions
+    // Assign layers and node positions
     console.log("📌 Assigning hierarchical layers...");
     const layers = assignLayers$1(graphData);
     if (!layers || layers.length === 0) {
@@ -4529,7 +4814,7 @@ function renderGraph(container, graphData, options) {
     adjustLayerSpacing(layers, { width, height, padding });
     console.log("✅ Layer spacing adjusted.");
 
-    // 🔹 Order vertices within layers to minimize edge crossings
+    // Order vertices within layers to minimize edge crossings
     console.log("📌 Ordering vertices within layers...");
     orderVerticesWithinLayers(layers, graphData);
 
@@ -4552,8 +4837,8 @@ function renderGraph(container, graphData, options) {
             node.y = padding + layerIndex * (height / layers.length);
         });
     });
-
-       //Ensure Links Reference Nodes Correctly
+    
+    //Ensure Links Reference Nodes Correctly
        graphData.links.forEach(link => {
         if (typeof link.source === "string" || typeof link.source === "number") {
             link.source = graphData.nodes.find(n => n.id == link.source);
@@ -4594,14 +4879,9 @@ function renderGraph(container, graphData, options) {
     const linkContainer = g.append("g").attr("class", "link-group");
     //linkGroup = g.append("g")
     linkGroup = linkContainer
-        //.attr("class", "link-group")
-        //.selectAll('.link')
         .selectAll('line')
         .data(graphData.links)
-        //.data(graphData.links, d => d.source.id + '-' + d.target.id) // Ensure links are correctly bound
-        //.enter()
         .join("line")
-        //.append('line')
         .attr('class', 'link')
         .attr('stroke', GRAPH_CONFIG.link.color)
         .attr('stroke-width', d => d.weight)
@@ -4609,92 +4889,6 @@ function renderGraph(container, graphData, options) {
         .attr('y1', d => d.source.y)
         .attr('x2', d => d.target.x)
         .attr('y2', d => d.target.y);
-/*
-        console.log("📌 Drawing Nodes...");
-        graphData.nodes.forEach(node => {
-            const nodeGroup = g.append("g")
-                .attr("class", "node-label-group")
-                .attr("transform", `translate(${node.x}, ${node.y})`);
-        
-        // Extent Label (Above Node)
-        nodeGroup.append("foreignObject")
-            .attr("width", 100)
-            .attr("height", 30)
-            .attr("x", -50)
-            .attr("y", -40) // Position above node
-            .html(() => node.reducedExtent.length > 0 ? `<div style="text-align:center; font-weight:bold;">${node.reducedExtent.join(", ")}</div>` : "");
-
-        // Node Circle
-        nodeGroup.append("circle")
-            .attr("r", GRAPH_CONFIG.node.maxRadius)
-            .attr("fill", node.color || GRAPH_CONFIG.node.color);
-
-        // Intent Label (Below Node)
-        nodeGroup.append("foreignObject")
-            .attr("width", 100)
-            .attr("height", 30)
-            .attr("x", -50)
-            .attr("y", 10) // Position below node
-            .html(() => node.reducedIntent.length > 0 ? `<div style="text-align:center; font-style:italic;">${node.reducedIntent.join(", ")}</div>` : "");
-    });
-
-    console.log("📌 Ensuring labelGroup is set...");
-    labelGroup = d3.selectAll(".node-label-group");
-
-*/
-    /*            
-    console.log("📌 Drawing Nodes...");
-    nodeGroup = g.selectAll('.node')
-        .data(graphData.nodes)
-        .enter()
-        .append('circle')
-        .attr('class', 'node')
-        .attr('cx', d => d.x)
-        .attr('cy', d => d.y)
-        .attr('r', GRAPH_CONFIG.node.maxRadius)
-        .attr('fill', d => d.color || GRAPH_CONFIG.node.color);
-
-    console.log("📌 Adding Node Labels...");
-    labelGroup = g.selectAll('.node-label')
-        .data(graphData.nodes)
-        .enter()
-        .append('text')
-        .attr('class', 'node-label')
-        .attr('text-anchor', 'middle')
-        //.attr('dy', d => (d.y < height / 2 ? -GRAPH_CONFIG.node.labelOffset : GRAPH_CONFIG.node.labelOffset))
-        .attr('dx', d => d.x) // Position labels correctly
-        .attr('dy', d => d.y - GRAPH_CONFIG.node.labelOffset) // Adjust label above the node
-        .text(d => d.id);
-
-    // ✅ Ensure edges follow nodes when moved
-    function updateLinks() {
-        linkGroup
-            .attr('x1', d => d.source.x)
-            .attr('y1', d => d.source.y)
-            .attr('x2', d => d.target.x)
-            .attr('y2', d => d.target.y);
-    }
-*/
-    
-   /* // ✅ Update node and label positions
-   function updateNodes(){
-        nodeGroup
-            .attr('cx', d => d.x)
-            .attr('cy', d => d.y);
-
-        labelGroup
-            .attr('x', d => d.x)
-            .attr('y', d => d.y - GRAPH_CONFIG.node.labelOffset);
-    }
-    */
-   /*
-    //Ensure that labelGroup is correctly created
-    if (!labelGroup.empty()) {
-        updateLabels("default", labelGroup);
-    } else {
-        console.error("❌ Label group is empty, skipping label update.");
-    }
-    */
 
     console.log("📌 Drawing Nodes...");
     nodeGroup = g.selectAll('.node-group')
@@ -4728,7 +4922,6 @@ function renderGraph(container, graphData, options) {
     }, 100);
 
     // ✅ Pass updateLinks to ensure edges move with nodes
-    //addNodeInteractivity(nodeGroup, linkGroup, graphData, nodeGroup, updateLinks);
 
     if (graphData && graphData.nodes && graphData.links) {
         addNodeInteractivity(nodeGroup, linkGroup, graphData);
@@ -4749,15 +4942,6 @@ function updateNodes(graphData) {
         console.error("❌ updateNodes() called before nodeGroup or labelGroup was initialized!");
         return;
     }
-    /*
-    nodeGroup
-        .attr('cx', d => d.x)
-        .attr('cy', d => d.y);
-
-    labelGroup
-        .attr('dx', d => d.x)
-        .attr('dy', d => d.y - GRAPH_CONFIG.node.labelOffset);
-    */
        
      // ✅ Ensure nodes visually move
      nodeGroup.attr("transform", d => `translate(${d.x}, ${d.y})`);
@@ -4804,22 +4988,6 @@ function wrapText(text, maxCharsPerLine) {
  */
 function updateLabels(mode, labelGroup) {
     console.log(`🔄 Updating Labels: Mode = ${mode}`);
-  /*
-   // Select node groups
-    const nodeGroups = d3.selectAll(".node-label-group");
-
-     // Ensure nodes exist
-    if (nodeGroups.empty()) {
-        console.error("❌ No nodes found. Ensure rendering runs before label updates.");
-        return;
-    }
-
-    nodeGroups.each(function (d) {
-        if (!d || !d.id) {
-            console.warn("⚠️ Skipping undefined node.");
-            return;
-        }
-    */
 
     // Select all nodes with labels
     selectAll(".node-label-group").each(function (d, i) {
@@ -4833,24 +5001,6 @@ function updateLabels(mode, labelGroup) {
 
     // Clear existing labels
     nodeGroup.selectAll("foreignObject").remove();
-   
-    /*
-    labelGroup.text(d => {
-        if (!d) return ""; // Handle undefined nodes
-
-        if (mode === "full") {
-            return d.label || d.id; // Full mode: Use `label` from JSON, fallback to `id`
-        } else if (mode === "reduced") {
-            if (!Array.isArray(d.reducedExtent) || !Array.isArray(d.reducedIntent)) {
-                console.warn(`⚠️ Reduced labels missing for node ${d.id}.`);
-                return "";
-            }
-            return formatLabel(d.reducedExtent, d.reducedIntent);
-        } else {
-            return d.id; // Default mode: Show node ID
-        }
-    });
-    */
 
     // Extract the extent and intent text based on the mode
     const extentText = (mode === "full" ? d.fullExtent : d.reducedExtent).join(", ");
@@ -4940,141 +5090,6 @@ function centerGraph(svg, { width, height, padding, bbox }) {
 
     console.log('✅ Graph centered with translation:', { translateX, translateY });
 }
-
-// src/core/canonicalBase.js
-
-/**
- * Extracts concepts (extent and intent) from graph data.
- * @param {Object} graphData - The graph data containing nodes.
- * @returns {Array} - An array of concepts with "extent" and "intent".
- */
-function extractConceptsFromGraph(graphData) {
-    return graphData.nodes.map(node => {
-       // Extract the Extent set from the node label using regex
-      const extentMatch = node.label.match(/Extent\s*{([^}]*)}/);
-      // Extract the Intent set from the node label using regex
-      const intentMatch = node.label.match(/Intent\s*{([^}]*)}/);
-      
-      // Parse the Extent values if found; otherwise, return an empty array
-      const extent = extentMatch 
-        ? extentMatch[1]
-            .split(',') // Split by comma
-            .map(item => item.trim()) // Remove unnecessary spaces
-        : [];
-
-      // Parse the Intent values if found; otherwise, return an empty array
-      const intent = intentMatch 
-        ? intentMatch[1]
-            .split(',')
-            .map(item => item.trim()) 
-        : [];
-  
-     // Return the concept as an object containing its Extent and Intent  
-     return { extent, intent };
-    });
-  }
-
-/**
- * Computes the canonical base (Duquenne–Guigues Base) for a given concept lattice.
- * @param {Array} concepts - The list of concepts, where each concept is an object with "extent" and "intent".
- * @returns {Array} - The canonical base as an array of implications (each implication has "premise" and "conclusion").
- */
-function computeCanonicalBase(concepts) {
-    const canonicalBase = [];
-  
-    /**
-     * Helper function to compute the closure of a given set of attributes (intent).
-     * The closure consists of all attributes that are implied by the given set.
-     * @param {Array} attributes - The attribute set to compute the closure for.
-     * @returns {Array} - The closure of the given attributes.
-     */
-    const computeClosure = (attributes) => {
-      return concepts
-      // Filter concepts that contain all attributes in the input set
-        .filter(concept => attributes.every(attr => concept.intent.includes(attr)))
-        .reduce((closure, concept) => {
-          // Add new attributes from the matched concepts
-          concept.intent.forEach(attr => {
-            if (!closure.includes(attr)) {
-              closure.push(attr);
-            }
-          });
-          return closure;
-        }, []); // Start with an empty closure set
-    };
-  
-    // Iterate over each concept in the lattice to generate implications
-    concepts.forEach(concept => {
-      const premise = [...concept.intent]; // The premise starts as the concept's intent
-      const closure = computeClosure(premise); // Compute the closure of the premise
-      const conclusion = closure.filter(attr => !premise.includes(attr)); // Attributes in closure but not in premise
-  
-      // If the closure introduces new attributes, add the implication
-      if (conclusion.length > 0) {
-        canonicalBase.push({ premise, conclusion });
-      }
-    });
-  
-    // Minimize the canonical base by removing redundant implications
-    const minimizedBase = minimizeImplications(canonicalBase);
-  
-    return minimizedBase;
-  }
-  
-  /**
-   * Minimizes a set of implications to ensure the canonical base is minimal.
-   * @param {Array} implications - The list of implications (each with "premise" and "conclusion").
-   * @returns {Array} - The minimized set of implications.
-   */
-  function minimizeImplications(implications) {
-    const minimized = [];
-  
-    implications.forEach(implication => {
-      const { premise, conclusion } = implication;
-  
-      // Check if the premise can be reduced while preserving the implication
-      const reducedPremise = premise.filter(attr => {
-        // Create a test premise by removing one attribute
-        const testPremise = premise.filter(a => a !== attr);
-        // Compute the closure of the test premise with the existing minimized implications
-        const closure = computeClosureForImplications(testPremise, minimized);
-        // If removing the attribute removes the conclusion, it is necessary
-        return !conclusion.every(attr => closure.includes(attr));
-      });
-  
-      // Add the minimized implication to the base
-      minimized.push({ premise: reducedPremise, conclusion });
-    });
-  
-    return minimized;
-  }
-  
-  /**
-   * Computes the closure of a set of attributes using a given set of implications.
-   * @param {Array} attributes - The set of attributes to compute the closure for.
-   * @param {Array} implications - The set of implications to use.
-   * @returns {Array} - The closure of the given attributes.
-   */
-  function computeClosureForImplications(attributes, implications) {
-    let closure = [...attributes]; // Initialize closure with the given attributes
-    let changed; // Track whether the closure has changed
-  
-    do {
-      changed = false;
-  
-      implications.forEach(({ premise, conclusion }) => {
-        // Check if the premise is fully contained in the current closure
-        if (premise.every(attr => closure.includes(attr)) &&
-            conclusion.some(attr => !closure.includes(attr))) {
-          // Add new attributes to the closure
-          closure.push(...conclusion.filter(attr => !closure.includes(attr)));
-          changed = true; // Mark that a change occurred
-        }
-      });
-    } while (changed); // Repeat until no further changes occur
-  
-    return closure;
-  }
 
 // src/features/legend.js
 
@@ -5476,6 +5491,74 @@ function exportAsPDF(svgElement) {
     img.src = "data:image/svg+xml;base64," + encodedSvgString;
 }
 
+/**
+ * Export the concept lattice as an SLF (Simple Lattice Format) file.
+ * SLF is a textual format commonly used in FCA tools like ConExp.
+ * This function extracts objects, attributes, and concepts (extent/intent pairs).
+ * 
+ * @param {Object} graphData - The lattice graph data (should include extent and intent for nodes).
+ */
+function exportAsSLF(graphData) {
+    if (!graphData) {
+        console.error("❌ exportAsSLF: No graph data found!");
+        alert("Error: No lattice data to export.");
+        return;
+    }
+
+    disableExportDropdown(); // Prevent multiple export triggers
+
+    console.log("📌 Exporting lattice as SLF...");
+
+    // Header for the SLF file (starts with B section)
+    const header = `B\n`;
+
+    const objects = new Set();    // Collect all unique objects (extent elements)
+    const attributes = new Set(); // Collect all unique attributes (intent elements)
+
+    // Traverse all nodes to extract extents and intents
+    graphData.nodes.forEach(node => {
+        (node.extent || []).forEach(obj => objects.add(obj));
+        (node.intent || []).forEach(attr => attributes.add(attr));
+    });
+
+    // Convert sets to arrays
+    const objectList = Array.from(objects);
+    const attributeList = Array.from(attributes);
+
+    // Begin composing SLF content
+    let slf = header;
+
+    // Write object list
+    slf += `# Objects\n`;
+    slf += objectList.join("\n") + "\n\n";
+
+    // Write attribute list
+    slf += `# Attributes\n`;
+    slf += attributeList.join("\n") + "\n\n";
+
+    // Write L section: list of all concepts with extents and intents
+    slf += `L\n# Concepts: extent and intent\n`;
+    graphData.nodes.forEach((node, idx) => {
+        const extent = (node.extent || []).join(", ");
+        const intent = (node.intent || []).join(", ");
+        slf += `Concept ${idx + 1}:\nE: ${extent}\nI: ${intent}\n\n`;
+    });
+
+    // Convert to downloadable plain text file
+    const blob = new Blob([slf], { type: "text/plain" });
+    const downloadLink = document.createElement("a");
+    downloadLink.href = URL.createObjectURL(blob);
+    downloadLink.download = "concept_lattice.slf";
+
+    // Trigger download
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+
+    console.log("✅ SLF exported successfully!");
+    enableExportDropdown(); // Re-enable dropdown
+}
+
 //src/core/lattice.js
 
 
@@ -5539,8 +5622,10 @@ function handleExportSelection(event, graphData) {
     }
 
     exportAsPDF(svgElement);
+}else if (selectedOption === "export-slf") {
+    console.log("✅ Exporting as SLF...");
+    exportAsSLF(graphData);
 }
-
     // ✅ Reset dropdown after an export is triggered (prevents double execution)
     event.target.value = ""; // Reset selection to prevent re-triggering
 
@@ -5553,7 +5638,6 @@ function handleExportSelection(event, graphData) {
  * @returns {Object} - The SVG and simulation instances for further use.
  */
 function createLattice(graphData, options = {}) {
-  //const { container = 'body', width = 800, height = 600 } = options;
   console.log("🚀 Creating Lattice Visualization...");
 
   // Merge options with defaults from the config file
@@ -5577,20 +5661,34 @@ function createLattice(graphData, options = {}) {
     }
 });
 
+  // Step 1: Enrich nodes with hierarchical relationships
+  computeSuperSubConcepts(graphData);
+
+   // Step 2: Layer assignment
   console.log("📌 Assigning Layers...");
   const layers = assignLayers$1(graphData);
   graphData.layers = layers;  // Store layers inside graphData
+ /* 
+  // Step 3: Vertical spacing between layers
+    console.log("📌 Adjusting Layer Spacing...");
+    adjustLayerSpacing(layers, { width, height, padding: GRAPH_CONFIG.dimensions.padding });
 
-
-console.log("📌 Ordering Nodes Within Layers...");
-orderVerticesWithinLayers(layers, graphData);  // Optimize horizontal positioning
-
+   // Step 4: Horizontal ordering using barycenter heuristics
+  console.log("📌 Ordering Nodes Within Layers...");
+  orderVerticesWithinLayers(layers, graphData);  // Optimize horizontal positioning
+*/
+  // Step 5: Horizontal positioning
+  console.log("📌 Assigning X Positions...");
+  adjustNodePositions(layers, width);
+  console.log("🔍 X positions after adjustNodePositions:", layers.flat().map(n => ({ id: n.id, x: n.x })));
+/*
+  // Step 6: Vertical positioning
   console.log("📌 Assigning X & Y positions...");
   // Set y-coordinates for nodes based on their assigned layers
   const layerSpacing = height / (layers.length + 1);
 
   layers.forEach((layer, layerIndex) => {
-    (width - 2 * GRAPH_CONFIG.dimensions.padding) / (layer.length + 1);
+    //const xSpacing = (width - 2 * GRAPH_CONFIG.dimensions.padding) / (layer.length + 1);
       layer.forEach((node, nodeIndex) => {
           node.y = GRAPH_CONFIG.dimensions.padding + layerIndex * layerSpacing; // Assign vertical spacing based on layer index
           //node.x = GRAPH_CONFIG.dimensions.padding +(nodeIndex + 1) * xSpacing; // Horizontal spacing
@@ -5598,15 +5696,34 @@ orderVerticesWithinLayers(layers, graphData);  // Optimize horizontal positionin
       });
   });
 
-
+  // Step 7: Sync computed x/y positions back into graphData.nodes
+  const updatedNodes = layers.flat();
+   for (const updatedNode of updatedNodes) {
+        const originalNode = graphData.nodes.find(n => n.id === updatedNode.id);
+        if (originalNode) {
+            originalNode.x = updatedNode.x;
+            originalNode.y = updatedNode.y;
+        }
+    }
+/*
   console.log("📌 Computing Superconcepts and Subconcepts...");
   computeSuperSubConcepts(graphData);  // Ensure correct hierarchical relationships
 
   // ✅ Spread nodes horizontally based on parent alignment
-adjustNodePositions(layers, width);
+adjustNodePositions(layers, width, GRAPH_CONFIG.dimensions.padding);
+*/
 
   // ✅ Compute reduced labels before rendering
   computeReducedLabels$1(graphData.nodes, graphData.links);
+
+   // ✅ Sync final layout to graphData.nodes
+    layers.flat().forEach(updated => {
+        const original = graphData.nodes.find(n => n.id === updated.id);
+        if (original) {
+            original.x = updated.x;
+            original.y = updated.y;
+        }
+    });
 
   // Calculate metrics and log them
   const metrics = calculateMetrics(graphData);
@@ -5643,8 +5760,10 @@ adjustNodePositions(layers, width);
  //const graphGroup = svg.select('.graph-transform');
  setTimeout(() => {
   const bbox = svg.select('.graph-transform').node().getBBox();
-  centerGraph(svg, { width, height, padding: GRAPH_CONFIG.dimensions.padding, bbox });
- }, 100);
+  if (bbox) {
+    centerGraph(svg, { width, height, padding: GRAPH_CONFIG.dimensions.padding, bbox });
+     }
+  }, 100);
 
   // Add export options after rendering
   addExportOptions(graphData);
@@ -5888,8 +6007,8 @@ function setupFileUpload() {
     // Get references to the file input, compute button, and results container from the DOM
     const fileInput = document.getElementById('file-upload');
     const loadButton = document.getElementById('load-json-file');
-    const computeButton = document.getElementById('compute-canonical-base');
-    const resultsContainer = document.getElementById('results');
+    //const computeButton = document.getElementById('compute-canonical-base');
+    //const resultsContainer = document.getElementById('results');
     const convertButton = document.getElementById("convert-and-download");
 
 
@@ -5897,17 +6016,19 @@ function setupFileUpload() {
      console.log("🔍 Checking DOM elements...");
      console.log("📂 fileInput:", fileInput);
      console.log("📂 loadButton:", loadButton);
-     console.log("📂 computeButton:", computeButton);
-     console.log("📂 resultsContainer:", resultsContainer);
+     //console.log("📂 computeButton:", computeButton);
+     //console.log("📂 resultsContainer:", resultsContainer);
      console.log("📂 convertButton:", convertButton);
 
      // Debug: Log elements
     console.log("🔍 Checking DOM elements before setup...", {
-        fileInput, loadButton, computeButton, resultsContainer
+        //fileInput, loadButton, computeButton, resultsContainer
+        fileInput, loadButton
     });
 
     // Validate elements
-    if (!fileInput || !loadButton || !computeButton || !resultsContainer || !convertButton) {
+    // if (!fileInput || !loadButton || !computeButton || !resultsContainer || !convertButton) {
+    if (!fileInput || !loadButton || !convertButton) {
         console.error('File upload elements are missing in the DOM.');
         return;
     }
@@ -5979,6 +6100,7 @@ function setupFileUpload() {
     /**
      * Compute Canonical Base. Handles the Compute button click event to process the uploaded data.
      */
+    /*
     computeButton.addEventListener('click', () => {
         
        // const file = fileInput.files[0];
@@ -5995,6 +6117,7 @@ function setupFileUpload() {
          * Extracts concepts from the uploaded JSON data.
          * @returns {Array} List of extracted concepts (each with extent and intent).
          */
+        /*
         const concepts = extractConceptsFromGraph(uploadedData);
         console.log('Extracted Concepts:', concepts);
 
@@ -6002,6 +6125,7 @@ function setupFileUpload() {
          * Computes the canonical base (implication rules) for the extracted concepts.
          * @returns {Array} List of implications, each with a premise and conclusion.
          */
+        /*
         const canonicalBase = computeCanonicalBase(concepts);
         console.log('Computed Canonical Base:', canonicalBase);
         
@@ -6010,6 +6134,7 @@ function setupFileUpload() {
          * Displays the computed canonical base in the results section.
          * @param {Array} canonicalBase - The computed implications to display.
          */
+        /*
         resultsContainer.textContent = JSON.stringify(canonicalBase, null, 2);
 
     } catch (error) {
@@ -6017,10 +6142,7 @@ function setupFileUpload() {
         alert('❌Error in computation. Please check your file format.');
     }
 });
-
-// Convert and Download button click event
-//convertButton.replaceWith(convertButton.cloneNode(true)); // Remove old listeners
-//convertButton = document.getElementById("convert-and-download");
+*/
 
 convertButton.addEventListener("click", () => {
     console.log("🟢 Convert button clicked!");
@@ -6057,23 +6179,6 @@ convertButton.addEventListener("click", () => {
       alert('❌ Conversion failed. Please ensure the file format is correct.');
     }
   });
-        /*const reader = new FileReader();
-        reader.onload = (event) => {
-            try {
-                const graphData = JSON.parse(event.target.result);
-                console.log('Graph Data:', graphData);
-
-                // Additional logic for processing the uploaded file
-            } catch (error) {
-                console.error('Error reading or processing file:', error);
-                alert('Invalid JSON file.');
-            }
-        };
-
-        reader.readAsText(file);
-    });*/
-
-
 }
 
 // src/index.js 
