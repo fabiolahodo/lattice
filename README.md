@@ -70,5 +70,5 @@ You can test the library by running the provided examples locally.
 ---
 ## 📖 Documentation
 
-- 🔰 [Usage Instructions](./usage.md): Step-by-step guide on how to upload your own formal context, visualize the lattice, and interact with the tool.
-- 🧪 [Examples and Visualizations](./examples.md): A curated set of examples demonstrating features such as full and reduced labeling, filtering, layout behavior, and export options.
+- 🔰 [Usage Instructions](docs/usage.md): Step-by-step guide on how to upload your own formal context, visualize the lattice, and interact with the tool.
+- 🧪 [Examples and Visualizations](examples/examples.md): A curated set of examples demonstrating features such as full and reduced labeling, filtering, layout behavior, and export options.
