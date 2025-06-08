@@ -8,8 +8,8 @@ This page showcases a set of example visualizations and use cases using `lattice
 1. [Gender-Age Context](#-example-1-basic-lattice-gender-age-example)
 2. [Building Regulations](#-example-2-building-regulations)
 <!-- 3. [Life in Water](#-example-3-life-in-water) -->
-3. [Linguistic Features from `concepts`](#-example-4-parsed-json-example-from-concepts-library)
-4. [Zoo Dataset (Large Lattice)](#-example-5--zoo-dataset-large-concept-lattice)
+3. [Linguistic Features from `concepts`](#-example-3-parsed-json-example-from-concepts-library)
+4. [Zoo Dataset (Large Lattice)](#-example-4--zoo-dataset-large-concept-lattice)
    
 
 
@@ -84,7 +84,7 @@ In this view, nodes are color-coded based on filtering results:
 </div>
 -->
 ---
-## 🔹 Example 4: Parsed JSON Example from `concepts` Library
+## 🔹 Example 3: Parsed JSON Example from `concepts` Library
 
 This example is taken directly from the [concepts Python library documentation](https://concepts.readthedocs.io/en/stable/examples.html#example-json), demonstrating a formal context for linguistic agreement features (person, number, polarity).
 
@@ -112,7 +112,7 @@ The following concept lattice was automatically generated using our `lattice.js`
 ✅ This confirms compatibility between `lattice.js` and external FCA tools like the `concepts` Python library.
 
 ---
-## 🔹 Example 5: 🦓 Zoo Dataset: Large Concept Lattice
+## 🔹 Example 4: 🦓 Zoo Dataset: Large Concept Lattice
 
 This example uses the [UCI Zoo dataset](https://archive.ics.uci.edu/dataset/111/zoo), which contains binary attributes for 80 animal species. The formal context was constructed by converting these attributes into a cross-table suitable for Formal Concept Analysis (FCA).
 
