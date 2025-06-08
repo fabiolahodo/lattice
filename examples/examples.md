@@ -7,9 +7,9 @@ This page showcases a set of example visualizations and use cases using `lattice
 
 1. [Gender-Age Context](#-example-1-basic-lattice-gender-age-example)
 2. [Building Regulations](#-example-2-building-regulations)
-3. [Life in Water](#-example-3-life-in-water)
-4. [Linguistic Features from `concepts`](#-example-4-parsed-json-example-from-concepts-library)
-5. [Zoo Dataset (Large Lattice)](#-example-5--zoo-dataset-large-concept-lattice)
+<!-- 3. [Life in Water](#-example-3-life-in-water) -->
+3. [Linguistic Features from `concepts`](#-example-4-parsed-json-example-from-concepts-library)
+4. [Zoo Dataset (Large Lattice)](#-example-5--zoo-dataset-large-concept-lattice)
    
 
 
@@ -56,7 +56,7 @@ In this view, nodes are color-coded based on filtering results:
 | ![Default](./screenshots/law-regulations-for-buildings.jpg) | ![Filtered](./screenshots/law-regulations-for-buildings-filter-(15-roof)-tooltip.png) |
 
 ---
-## 🔹 Example 3: Life in Water
+<!-- ## 🔹 Example 3: Life in Water
 
 The following formal context relates to biological traits of animals and plants, including movement, habitat, and reproduction.
 
@@ -82,7 +82,7 @@ In this view, nodes are color-coded based on filtering results:
   <div align="center">
   <img src="./screenshots/live-in-water.png" alt="Live in Water" width="550"/>
 </div>
-
+-->
 ---
 ## 🔹 Example 4: Parsed JSON Example from `concepts` Library
 
